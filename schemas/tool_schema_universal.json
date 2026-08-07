@@ -46,7 +46,7 @@
       },
       "round_to": {
         "type": "integer",
-        "description": "宽高对齐倍数。Anima 基于 Cosmos 架构，VAE 缩放 8 倍后需被 spatial_patch_size=2 整除，所以默认 16。不建议改小。",
+        "description": "宽高对齐倍数。默认 16，不建议改小。",
         "default": 16,
         "minimum": 16
       },
@@ -179,7 +179,7 @@
           "properties": {
             "name": {
               "type": "string",
-              "description": "LoRA 文件名（位于 ComfyUI/models/loras/ 下，可包含子目录）。必须与 ComfyUI 接口 GET /models/loras 返回的条目逐字一致。Windows 下 /models/loras 通常返回反斜杠路径（例如 `_Anima\\cosmic_xxx.safetensors`）；如果你在 JSON 里手写，需要写成 `_Anima\\\\cosmic_xxx.safetensors`（`\\\\` 表示一个反斜杠）。建议直接从 /models/loras 复制，或使用本工具的 list_anima_models(model_type=\"loras\")（仅返回带同名 .json sidecar 元数据的 LoRA）。"
+              "description": "LoRA 文件名（位于 ComfyUI/models/loras/ 下，可包含子目录）。必须与 ComfyUI 接口 GET /models/loras 返回的条目逐字一致（含子目录分隔符，Windows 下通常为反斜杠路径）。建议直接从 /models/loras 复制，或使用本工具的 list_anima_models(model_type=\"loras\")（仅返回带同名 .json sidecar 元数据的 LoRA）。"
             },
             "weight": {
               "type": "number",

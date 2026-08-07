@@ -1,0 +1,91 @@
+{
+  "name": "generate_anima_ultrareal",
+  "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3) 生成接口。Anima base1.0 的真实系微调，生成写实照片风图片（手机自拍/数码相机/胶片/VHS/单反），适合 cosplay、生活照、电影感场景。tags 填 @ 开头的相机/灯光/风格标签，nltags 填英文自然语言场景描述，quality_meta_year_safe 填安全等级 + @年份 + score_N。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "tags": {
+        "type": "string",
+        "description": "前缀标签（Prefix Tags），全部以 @ 开头，空格分隔。相机/技术：@smartphone_photo（现代手机）、@compact_digital_photo（2000年代数码相机）、@film_photo（胶片）、@vhs_screencap（录像带）、@dslr_photo（专业单反）。灯光/风格：@available_light（自然光）、@direct_flash（直闪）、@candid_photo（抓拍）、@posed_photo（摆拍）、@mirror_reflection（对镜自拍）、@underexposed/@overexposed（欠曝/过曝）、@amateur_photo、@professional_photo。示例：'@smartphone_photo @amateur_photo @candid_photo @available_light'",
+        "default": "@smartphone_photo @amateur_photo @candid_photo @available_light"
+      },
+      "nltags": {
+        "type": "string",
+        "description": "自然语言场景描述（Natural Language Description）：用英文完整句子描述人物、服装、姿势、表情、背景与光影，写足细节（2-4 句）。避免逗号分隔的标签堆叠（tag-soup）。示例：'A close-up portrait selfie of a young woman cosplaying Shiroko from Blue Archive, with short silver hair, wolf ears and a black scarf. She is looking at the camera with a calm expression. The background is a blurry classroom.'"
+      },
+      "quality_meta_year_safe": {
+        "type": "string",
+        "description": "后缀标签：安全等级 + 模拟拍摄年份 + 质量分，空格分隔。安全等级：@sfw 或 @nsfw（必须明确）。年份：@1995/@2000/@2005/@2010/@2020/@2025。质量分：score_5~score_9（高清干净用 score_8/score_9；故意做 lo-fi 粗糙感用 score_6/score_7 并搭配 @smartphone_photo/@compact_digital_photo）。示例：'@sfw @2025 score_8'",
+        "default": "@sfw @2025 score_8"
+      },
+      "neg": {
+        "type": "string",
+        "description": "负面提示词。默认已包含低分标签（score_1-4）与通用质量反咒，并按安全等级自动追加对立约束（@sfw → 负面加 @nsfw）。一般留空即可。",
+        "default": ""
+      },
+      "cfg": {
+        "type": "number",
+        "description": "CFG 引导强度，默认 4。",
+        "default": 4.0
+      },
+      "steps": {
+        "type": "integer",
+        "description": "采样步数，默认 28。",
+        "default": 28
+      },
+      "sampler_name": {
+        "type": "string",
+        "description": "采样器，默认 er_sde。",
+        "default": "er_sde"
+      },
+      "scheduler": {
+        "type": "string",
+        "description": "调度器，默认 simple。",
+        "default": "simple"
+      },
+      "aspect_ratio": {
+        "type": "string",
+        "description": "图片比例。默认 1:1。",
+        "enum": ["16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"],
+        "default": "1:1"
+      },
+      "width": {
+        "type": "integer",
+        "description": "宽度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "height": {
+        "type": "integer",
+        "description": "高度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "批量生成数量。",
+        "default": 1,
+        "minimum": 1
+      },
+      "seed": {
+        "type": "integer",
+        "description": "随机种子。缺省则随机。",
+        "minimum": 0
+      },
+      "positive": {
+        "type": "string",
+        "description": "可选：直接提供最终正面提示词（覆盖三段式拼接）。通常不需要。",
+        "default": ""
+      },
+      "filename_prefix": {
+        "type": "string",
+        "description": "输出文件名前缀。",
+        "default": "AnimaTool_ultrareal_"
+      }
+    },
+    "required": [
+      "tags",
+      "nltags",
+      "quality_meta_year_safe"
+    ],
+    "additionalProperties": false
+  }
+}

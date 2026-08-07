@@ -1,8 +1,6 @@
 # 画师参考（@artist）
 
 > 说明：Anima 对画师标签要求必须带 `@` 前缀。建议一次只用 1 位画师。
->
-> 这里先放一份"常用/示例"列表（你也可以用 `export_danbooru_artists_to_csv.py` 导出完整 danbooru artist 列表，并在外部做检索/筛选）。  
 
 ## 常用示例
 

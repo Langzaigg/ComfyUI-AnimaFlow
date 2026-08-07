@@ -101,6 +101,14 @@ WORKFLOWS = {
         "schema": "tool_schema_kira_turbo.json",
         "knowledge": _KIRA_KNOWLEDGE,
     },
+    "ultrareal": {
+        "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3)：Anima base1.0 真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式）",
+        "schema": "tool_schema_ultrareal.json",
+        "knowledge": {
+            "ultrareal_expert": "ultrareal_expert.md",
+            "ultrareal_examples": "ultrareal_examples.md",
+        },
+    },
 }
 
 DEFAULT_WORKFLOW = "base"
@@ -132,6 +140,8 @@ def create_app() -> FastAPI:
             return executor.generate_kira(payload)
         if workflow == "kira_turbo":
             return executor.generate_kira(payload, turbo=True)
+        if workflow == "ultrareal":
+            return executor.generate_ultrareal(payload)
         return executor.generate(payload)
 
     @app.get("/health")

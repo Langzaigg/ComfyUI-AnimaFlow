@@ -134,6 +134,7 @@ MCP Server 返回：
 | `aesthetic_v1` | Aesthetic 1.0：高质量微调完整 UNET |
 | `kira` | Kira (Kirazuri Anima v4)：Anima 微调 UNET（cfg 4-5，steps 30-50，er_sde） |
 | `kira_turbo` | Kira Turbo：Kira + 8-step LoRA（cfg=1，steps=8，默认 1536²） |
+| `ultrareal` | UltraReal (UltraReal_FineTune_Anima_base1_v3)：真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式） |
 
 - `GET /anima/schema?workflow=turbo_v1` — 返回对应工作流的 Tool Schema
 - `GET /anima/knowledge?workflow=turbo_v1` — 返回对应工作流的专家知识
@@ -420,6 +421,30 @@ curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=kira_turbo" \
 
 ---
 
+### UltraReal 工作流
+
+UltraReal (UltraReal_FineTune_Anima_base1_v3) 是 Anima base1.0 的真实系微调，生成写实照片风图片，通过主 API 的 `workflow=ultrareal` 使用：
+
+| 项 | 值 |
+|----|----|
+| 模型 | `Anima_UltraReal_finetune_v3.safetensors`（`models/diffusion_models`） |
+| 采样 | `er_sde` + `simple`，steps 默认 28，cfg 默认 4.0 |
+
+```bash
+curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=ultrareal" \
+  -H "Content-Type: application/json" \
+  -d '{"tags":"@smartphone_photo @amateur_photo @candid_photo @available_light","nltags":"A close-up selfie of a young woman cosplaying Shiroko from Blue Archive, with short silver-grey hair, grey wolf ears and a black scarf.","quality_meta_year_safe":"@sfw @2025 score_8"}'
+```
+
+字段与其他工作流不同（必填 `tags` / `nltags` / `quality_meta_year_safe`）：
+
+- `tags`：@ 开头的相机/灯光/风格标签（如 `@film_photo` `@direct_flash` `@mirror_reflection`）
+- `nltags`：英文自然语言完整句子描述场景，角色外观必须写在这里
+- `quality_meta_year_safe`：安全等级（`@sfw`/`@nsfw`）+ 模拟年份（`@1995`~`@2025`）+ 质量分（`score_5`~`score_9`）
+- 负面提示词留空即可，默认内置低分标签（score_1-4）+ 安全对立约束
+
+---
+
 ### 模型对比
 
 | 模型 | 端点 | cfg | steps | neg | 字段 |
@@ -430,6 +455,7 @@ curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=kira_turbo" \
 | Aesthetic 1.0 | `/anima/generate_aesthetic_v1` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 简化（无 style/tags/environment） |
 | Kira | `/anima/generate?workflow=kira` | 4-5, 默认 4.5 | 30-50, 默认 40 | 有 | 简化（无 style/tags/environment） |
 | Kira Turbo | `/anima/generate?workflow=kira_turbo` | 固定 1 | 固定 8 | 有 | 简化，默认 1024×1024 |
+| UltraReal | `/anima/generate?workflow=ultrareal` | 默认 4 | 默认 28 | 有 | 三段式（tags 前缀 + nltags 自然语言 + 后缀） |
 
 > 所有模型的 `tags` 均以标准 Danbooru 标签（逗号分隔）为主；没有特别符合的标准 tag 时用自然语言补充描述，不要编造不标准 tag。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分（base 为 `nltags`，其余为 `tags` 的自然语言句子）逐角色分别描述。Turbo 1.0 / Aesthetic 1.0 的 `quality_meta_year_safe` 格式为 `masterpiece, best quality, <rating>`。
 

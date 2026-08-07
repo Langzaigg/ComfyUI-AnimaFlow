@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_kira_turbo",
-  "description": "Kira Turbo (Kirazuri Anima v4 + 8-step LoRA) 快速生成接口。固定 8 步、CFG 1，默认 1024x1024 分辨率。提示词规则与 kira 一致：标签顺序 [质量/美学/安全] [角色] [作品] [画师] [人数] [通用标签]（人数标签靠后）；tags 使用英文自然语言完整句子（本模型为标签与自然语言混合训练，短提示词/纯标签容易概念串扰，需写足细节）。",
+  "description": "Kira Turbo (Kirazuri Anima v4 + 8-step LoRA) 快速生成接口。固定 8 步、CFG 1，默认 1024x1024 分辨率。提示词规则与 kira 一致：tags 使用英文自然语言完整句子（本模型为标签与自然语言混合训练，短提示词/纯标签容易概念串扰，需写足细节）。",
   "parameters": {
     "type": "object",
     "properties": {

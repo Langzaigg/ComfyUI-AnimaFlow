@@ -1,0 +1,74 @@
+[
+  {
+    "name": "A_er_sde+simple",
+    "elapsed_s": 39.6,
+    "files": [
+      "UR_A_er_sde+simple__00001_.png"
+    ],
+    "overrides": {
+      "sampler_name": "er_sde",
+      "scheduler": "simple"
+    },
+    "seed": 20250807
+  },
+  {
+    "name": "A_euler+simple",
+    "elapsed_s": 63.0,
+    "files": [
+      "UR_A_euler+simple__00001_.png"
+    ],
+    "overrides": {
+      "sampler_name": "euler",
+      "scheduler": "simple"
+    },
+    "seed": 20250807
+  },
+  {
+    "name": "A_dpmpp_2m+karras",
+    "elapsed_s": 108.1,
+    "files": [
+      "UR_A_dpmpp_2m+karras__00001_.png"
+    ],
+    "overrides": {
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras"
+    },
+    "seed": 20250807
+  },
+  {
+    "name": "A_dpmpp_2m_sde+karras",
+    "elapsed_s": 105.4,
+    "files": [
+      "UR_A_dpmpp_2m_sde+karras__00001_.png"
+    ],
+    "overrides": {
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras"
+    },
+    "seed": 20250807
+  },
+  {
+    "name": "A_res_multistep+simple",
+    "elapsed_s": 130.3,
+    "files": [
+      "UR_A_res_multistep+simple__00001_.png"
+    ],
+    "overrides": {
+      "sampler_name": "res_multistep",
+      "scheduler": "simple"
+    },
+    "seed": 20250807
+  },
+  {
+    "name": "A_sa_solver_pece+simple",
+    "elapsed_s": 216.2,
+    "files": [
+      "UR_A_sa_solver_pece+simple__00001_.png"
+    ],
+    "overrides": {
+      "sampler_name": "sa_solver_pece",
+      "scheduler": "simple"
+    },
+    "seed": 20250807
+  }
+]

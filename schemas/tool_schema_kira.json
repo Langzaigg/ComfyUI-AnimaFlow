@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_kira",
-  "description": "Kira (Kirazuri Anima v4) 生成接口。使用简化字段生成二次元插画。与 base Anima 的差异：标签顺序为 [质量/美学/安全] [角色] [作品] [画师] [人数] [通用标签]（人数标签靠后）；质量标签可用 very aesthetic / aesthetic 引导模型自带审美；tags 使用英文自然语言完整句子（本模型为标签与自然语言混合训练，短提示词/纯标签容易概念串扰，需写足细节）。",
+  "description": "Kira (Kirazuri Anima v4) 生成接口。使用简化字段生成二次元插画。质量标签可用 very aesthetic / aesthetic 引导模型自带审美；tags 使用英文自然语言完整句子（本模型为标签与自然语言混合训练，短提示词/纯标签容易概念串扰，需写足细节）。",
   "parameters": {
     "type": "object",
     "properties": {
@@ -11,7 +11,7 @@
       },
       "count": {
         "type": "string",
-        "description": "人数标签，如 '1girl' / '2girls' / '1boy' / '1other'。本模型人数标签位置靠后（由后端自动组装到 artist 之后）。",
+        "description": "人数标签，如 '1girl' / '2girls' / '1boy' / '1other'。",
         "default": "1girl"
       },
       "character": {

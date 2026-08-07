@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -114,6 +114,39 @@ def build_kira_positive_text(prompt_json: Dict[str, Any]) -> str:
         prompt_json.get("appearance", ""),
         prompt_json.get("tags", ""),
     )
+
+
+def build_ultrareal_positive_text(prompt_json: Dict[str, Any]) -> str:
+    """
+    UltraReal (UltraReal_FineTune_Anima_base1_v3) 拼接正面提示词。
+    官方 Prompt Formula（空格分隔，不用逗号）：
+    [Prefix Tags] + [Natural Language Description] + [Suffix Tags & Score]
+
+    字段映射：
+    - tags: 前缀标签（@相机/@灯光/@风格，如 @smartphone_photo @candid_photo @available_light）
+    - nltags: 自然语言场景描述（英文完整句子，避免标签堆叠）
+    - quality_meta_year_safe: 后缀（安全等级 + @年份 + score_N，如 @sfw @2025 score_8）
+    """
+    parts: List[str] = []
+    for key in ("tags", "nltags", "quality_meta_year_safe"):
+        s = str(prompt_json.get(key) or "").strip()
+        if s:
+            parts.append(s)
+    return " ".join(parts)
+
+
+def build_ultrareal_negative_text(prompt_json: Dict[str, Any]) -> str:
+    """
+    UltraReal 默认负面提示词。
+    以低分标签（score_1-4，官方建议 score 可用于负面）+ 通用质量反咒为基础，
+    根据正面后缀中的安全标签追加对立约束（@sfw → 负面加 @nsfw，反之亦然）。
+    """
+    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
+    nsfw = "@nsfw" in q or "nsfw" in q
+    base = "score_1, score_2, score_3, score_4, worst quality, low quality, blurry, jpeg artifacts, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo"
+    if nsfw:
+        return f"{base}, @sfw, censored, mosaic"
+    return f"{base}, @nsfw"
 
 
 def build_new_models_negative_text(prompt_json: Dict[str, Any]) -> str:
@@ -779,6 +812,80 @@ class AnimaExecutor:
         # 文件名前缀
         default_prefix = "AnimaTool_kira_turbo_" if turbo else "AnimaTool_kira_"
         wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or default_prefix)
+
+        return wf
+
+    def _inject_ultrareal(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        UltraReal (UltraReal_FineTune_Anima_base1_v3) 工作流注入。
+        Anima base1.0 的真实系微调完整 UNET，复用统一模板，LoRA 关闭。
+        提示词为官方三段式：[Prefix @标签] + [自然语言] + [@年份 score 后缀]。
+        """
+        wf = deepcopy(self._workflow_template_unified)
+
+        clip_name = prompt_json.get("clip_name") or self.config.clip_name
+        unet_name = prompt_json.get("unet_name") or ULTRAREAL_UNET_NAME
+        vae_name = prompt_json.get("vae_name") or self.config.vae_name
+
+        wf["45"]["inputs"]["clip_name"] = str(clip_name)
+        wf["44"]["inputs"]["unet_name"] = str(unet_name)
+        wf["15"]["inputs"]["vae_name"] = str(vae_name)
+
+        # 完整 UNET，不需要额外 LoRA
+        wf["60"]["inputs"]["strength_model"] = 0.0
+
+        # 文本：三段式拼接（tags + nltags + quality_meta_year_safe）
+        positive = (prompt_json.get("positive") or "").strip()
+        if not positive:
+            positive = build_ultrareal_positive_text(prompt_json)
+        negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
+        if not negative:
+            negative = build_ultrareal_negative_text(prompt_json)
+
+        wf["11"]["inputs"]["text"] = positive
+        wf["12"]["inputs"]["text"] = negative
+
+        # 分辨率
+        width = prompt_json.get("width")
+        height = prompt_json.get("height")
+        aspect_ratio = (prompt_json.get("aspect_ratio") or "").strip()
+        round_to = int(prompt_json.get("round_to") or self.config.round_to)
+
+        if (width is None or height is None) and aspect_ratio:
+            w, h = estimate_size_from_ratio(
+                aspect_ratio=aspect_ratio,
+                target_megapixels=float(prompt_json.get("target_megapixels") or self.config.target_megapixels),
+                round_to=round_to,
+            )
+            width, height = w, h
+        elif width is not None and height is not None:
+            width = align_dimension(width, round_to)
+            height = align_dimension(height, round_to)
+
+        if width is None or height is None:
+            width, height = 1024, 1024
+
+        wf["28"]["inputs"]["width"] = int(width)
+        wf["28"]["inputs"]["height"] = int(height)
+        wf["28"]["inputs"]["batch_size"] = int(prompt_json.get("batch_size") or 1)
+
+        # 种子
+        seed = prompt_json.get("seed")
+        if seed is None:
+            seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
+        wf["19"]["inputs"]["seed"] = int(seed)
+
+        # 采样参数（默认值来自实测，见 knowledge/ultrareal_expert.md）
+        wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or ULTRAREAL_STEPS)
+        wf["19"]["inputs"]["cfg"] = float(prompt_json.get("cfg") or ULTRAREAL_CFG)
+        sampler, scheduler = ULTRAREAL_SAMPLER
+        wf["19"]["inputs"]["sampler_name"] = str(prompt_json.get("sampler_name") or sampler)
+        wf["19"]["inputs"]["scheduler"] = str(prompt_json.get("scheduler") or scheduler)
+        if prompt_json.get("denoise") is not None:
+            wf["19"]["inputs"]["denoise"] = float(prompt_json["denoise"])
+
+        # 文件名前缀
+        wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or "AnimaTool_ultrareal_")
 
         return wf
 
@@ -1572,6 +1679,77 @@ class AnimaExecutor:
         if turbo:
             # res_2s+bong_tangent 不可用而自动回落 res_multistep+simple 时为 True
             result["sampler_fallback"] = sampler_fallback or self._kira_turbo_sampler_fallback
+
+        record = self.history.add(
+            params=prompt_json,
+            positive_text=actual_positive,
+            negative_text=actual_negative,
+            prompt_id=prompt_id,
+            seed=actual_seed,
+            width=actual_width,
+            height=actual_height,
+        )
+        result["history_id"] = record.id
+
+        return result
+
+    def generate_ultrareal(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        UltraReal (UltraReal_FineTune_Anima_base1_v3) 生成入口。
+        Anima base1.0 真实系微调：写实照片风（手机/数码/胶片/VHS/DSLR）。
+
+        参数（官方三段式 Prompt Formula，按此顺序拼接）：
+        - tags: 前缀标签 —— @相机/@灯光/@风格，如 '@smartphone_photo @candid_photo @available_light'
+        - nltags: 自然语言场景描述 —— 英文完整句子（人物、服装、姿势、背景），避免标签堆叠
+        - quality_meta_year_safe: 后缀 —— 安全等级 + @年份 + score_N，如 '@sfw @2025 score_8'
+        - 其余：steps / cfg / sampler_name / scheduler / aspect_ratio / width / height / seed
+        """
+        prompt = self._inject_ultrareal(prompt_json)
+
+        # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
+        self._maybe_clean_comfyui_output()
+        prompt_id = self.queue_prompt(prompt)
+        history_item = self.wait_history(prompt_id)
+        images = self._extract_images(prompt_id, history_item)
+        images = self._download_images(images)
+
+        images_data = []
+        for im in images:
+            mime_type = self._get_mime_type(im.filename)
+            b64 = base64.b64encode(im.content).decode("ascii") if im.content else None
+
+            img_info = {
+                "filename": im.filename,
+                "subfolder": im.subfolder,
+                "type": im.folder_type,
+                "url": im.view_url,
+                "view_url": im.view_url,
+                "file_path": im.saved_path,
+                "saved_path": im.saved_path,
+                "base64": b64,
+                "mime_type": mime_type,
+                "data_url": f"data:{mime_type};base64,{b64}" if b64 else None,
+                "markdown": f"![{im.filename}]({im.view_url})",
+            }
+            images_data.append(img_info)
+
+        actual_seed = int(prompt["19"]["inputs"]["seed"])
+        actual_positive = prompt["11"]["inputs"]["text"]
+        actual_negative = prompt["12"]["inputs"]["text"]
+        actual_width = int(prompt["28"]["inputs"]["width"])
+        actual_height = int(prompt["28"]["inputs"]["height"])
+
+        result = {
+            "success": True,
+            "mode": "ultrareal",
+            "prompt_id": prompt_id,
+            "positive": actual_positive,
+            "negative": actual_negative,
+            "seed": actual_seed,
+            "width": actual_width,
+            "height": actual_height,
+            "images": images_data,
+        }
 
         record = self.history.add(
             params=prompt_json,

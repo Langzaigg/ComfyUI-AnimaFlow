@@ -59,6 +59,14 @@ KIRA_TURBO_LORA_NAME = "kirazuri-anima-turbo-v4-8step.safetensors"
 KIRA_TURBO_SAMPLER = ("res_2s", "bong_tangent")
 KIRA_TURBO_SAMPLER_FALLBACK = ("res_multistep", "simple")
 
+# UltraReal (Danrisi/UltraReal_FineTune_Anima_base1_v3) 模型文件名
+# Anima base1.0 的真实系微调：@ 前缀相机/灯光标签 + 自然语言 + @年份 score_N 后缀
+ULTRAREAL_UNET_NAME = "Anima_UltraReal_finetune_v3.safetensors"
+# UltraReal 默认采样组合（实测得出，详见 knowledge/ultrareal_expert.md）
+ULTRAREAL_SAMPLER = ("er_sde", "simple")
+ULTRAREAL_STEPS = 28
+ULTRAREAL_CFG = 4.0
+
 
 @dataclass
 class AnimaToolConfig:
