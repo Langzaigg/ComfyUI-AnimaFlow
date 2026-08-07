@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_image",
-  "description": "使用 Anima（circlestone-labs/Anima）在本地 ComfyUI 生成二次元/插画向图片。调用方应先按 Anima 规范生成结构化字段（顺序：[质量/元数据/年份/安全] [人数] [角色] [作品] [画师] [风格] [外观] [标签] [环境] [自然语言]；自然语言(nltags)建议放最后），并保证安全标签明确（safe/sensitive/nsfw/explicit）。支持并行调用：生成多张图时可同时发起多个请求，无需串行等待。",
+  "description": "使用 Anima（circlestone-labs/Anima）在本地 ComfyUI 生成二次元/插画向图片。调用方应先按 Anima 规范生成结构化字段（顺序：[质量/元数据/年份/安全] [人数] [角色] [作品] [画师] [风格] [外观] [标签] [环境] [自然语言]；自然语言(nltags)建议放最后），并保证安全标签明确（safe/sensitive/nsfw/explicit）。tags 只写真实存在的标准 Danbooru 标签，没有特别符合的 tag 时在 nltags 用自然语言描述，不要编造不标准 tag。多角色时：appearance 必须留空，tags 禁止包含任何角色外貌信息，角色名统一写在 character 中，每个角色的外观在 nltags 中逐角色分别描述。",
   "parameters": {
     "type": "object",
     "properties": {
@@ -63,17 +63,17 @@
       },
       "steps": {
         "type": "integer",
-        "description": "步数，推荐 25-50。",
-        "default": 25,
-        "minimum": 1,
-        "maximum": 200
+        "description": "采样步数，推荐 30-50，影响画面精细度。画面复杂时（多人物、精细背景、复杂构图）应取较高值。",
+        "default": 35,
+        "minimum": 20,
+        "maximum": 60
       },
       "cfg": {
         "type": "number",
-        "description": "CFG，推荐 4-5。",
-        "default": 4.5,
-        "minimum": 0,
-        "maximum": 30
+        "description": "CFG 引导强度，推荐 4-5，影响提示词遵循度。画面复杂时（多人物、细节丰富）应取较高值。",
+        "default": 4,
+        "minimum": 3,
+        "maximum": 8
       },
       "sampler_name": {
         "type": "string",
@@ -99,7 +99,7 @@
       },
       "quality_meta_year_safe": {
         "type": "string",
-        "description": "质量/元数据/年份/安全标签。必须明确 safe/sensitive/nsfw/explicit 之一。示例：'masterpiece, best quality, highres, newest, year 2024, safe'"
+        "description": "质量/元数据/年份/安全标签。必须明确 safe/sensitive/nsfw/explicit 之一。示例：'masterpiece, best quality, highres, newest, year 2025, sensitive'"
       },
       "count": {
         "type": "string",
@@ -117,12 +117,12 @@
       },
       "appearance": {
         "type": "string",
-        "description": "角色固定外观：发型发色、眼睛、身材等（不包含服装/饰品）。",
+        "description": "角色外观标签：发型发色、眼睛、服装、饰品等。仅单角色使用；多角色时必须留空，外观在 nltags 中逐角色分别描述。",
         "default": ""
       },
       "artist": {
         "type": "string",
-        "description": "画师标签，必须以 @ 开头。支持多画师混合（如 '@fkey, @jima'）实现风格融合，但稳定性会下降。AI 自动生成时建议只用 1 位画师；用户明确要求多画师时按用户意愿执行。示例：'@fkey' 或 '@fkey, @jima'。",
+        "description": "画师标签，必须以 @ 开头。仅在用户明确提到画师或特定画风时才填写；无明确需求时留空，不默认追加画师。支持多画师混合（如 '@fkey, @jima'），但稳定性会下降。",
         "default": ""
       },
       "style": {
@@ -132,11 +132,11 @@
       },
       "tags": {
         "type": "string",
-        "description": "核心 Danbooru 标签（逗号分隔）。建议把动作/构图/服装/表情/镜头等关键内容放这里。"
+        "description": "核心 Danbooru 标签（逗号分隔）。建议把动作/构图/服装/表情/镜头等关键内容放这里。只写真实存在的标准 Danbooru 标签；没有特别符合的 tag 时不要编造，改在 nltags 用自然语言描述。多角色时禁止包含任何角色外貌信息（发色、瞳色、发型、服装、饰品）。"
       },
       "nltags": {
         "type": "string",
-        "description": "自然语言补充（可选，最多一句话，实在没法用 tag 才写）。",
+        "description": "自然语言描述。用于补充没有标准 tag 的内容；多角色时在此逐角色写明每个角色的外观和服装归属。纯自然语言提示至少写 2 句话，过短可能产生意外结果。",
         "default": ""
       },
       "environment": {
@@ -146,8 +146,8 @@
       },
       "neg": {
         "type": "string",
-        "description": "负面提示词。建议包含：worst quality/low quality/score_1..3/blurry/jpeg artifacts/手脚崩坏反咒/text/watermark/logo 等，并加入与安全标签相反约束。",
-        "default": "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, extra toes, text, watermark, logo"
+        "description": "负面提示词。建议包含：worst quality/low quality/score_1..3/artist name/blurry/jpeg artifacts/chromatic aberration/手脚崩坏反咒/text/watermark/logo 等，并加入与安全标签相反约束。",
+        "default": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo"
       },
       "positive": {
         "type": "string",
@@ -196,7 +196,6 @@
     "required": [
       "quality_meta_year_safe",
       "count",
-      "artist",
       "tags",
       "neg"
     ],

@@ -1,7 +1,7 @@
 {
   "prompt_hint": "示例：使用 cosmic princess kaguya / @spacetime kaguya 画风 + 自训练 LoRA",
   "aspect_ratio": "3:4",
-  "quality_meta_year_safe": "newest, year 2024, safe",
+  "quality_meta_year_safe": "newest, year 2025, sensitive",
   "count": "1girl",
   "character": "kaguya",
   "series": "cosmic princess kaguya",
@@ -12,7 +12,7 @@
   "environment": "classroom, window, sunlight",
   "nltags": "A cheerful girl stands by the window.",
   "neg": "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, extra toes, text, watermark, logo",
-  "steps": 25,
+  "steps": 35,
   "cfg": 4.5,
   "sampler_name": "er_sde",
   "loras": [

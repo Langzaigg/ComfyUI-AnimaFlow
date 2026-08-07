@@ -65,7 +65,7 @@ TOOL_SCHEMA = {
         "height": {"type": "integer", "description": "可选：高度（像素），须为16倍数。若指定则覆盖 aspect_ratio。"},
         "quality_meta_year_safe": {
             "type": "string",
-            "description": "必选：质量/年份/安全标签。必须包含 safe/sensitive/nsfw/explicit 之一。示例: 'masterpiece, best quality, year 2024, safe'"
+            "description": "必选：质量/年份/安全标签。必须包含 safe/sensitive/nsfw/explicit 之一。示例: 'masterpiece, best quality, year 2025, sensitive'"
         },
         "count": {
             "type": "string",
@@ -76,7 +76,7 @@ TOOL_SCHEMA = {
         "appearance": {"type": "string", "description": "可选：角色固定外观描述（发色、眼睛、身材等，不含服装）。"},
         "artist": {
             "type": "string",
-            "description": "必选：画师标签，必须以 @ 开头（如 @fkey）。多画师逗号分隔。若用户没指定画师，请根据风格推荐一位。"
+            "description": "可选：画师标签，必须以 @ 开头（如 @fkey）。仅在用户明确提到画师或特定画风时才填写；无明确需求时留空。"
         },
         "style": {"type": "string", "description": "可选：画风倾向或特定渲染风格。"},
         "tags": {
@@ -90,7 +90,7 @@ TOOL_SCHEMA = {
             "description": "必选：负面提示词。默认已包含通用反咒。建议加入与安全标签相反的约束。",
             "default": "worst quality, low quality, score_1, score_2, score_3, blurry, bad hands, bad anatomy, text, watermark"
         },
-        "steps": {"type": "integer", "description": "可选：步数，默认 25。", "default": 25},
+        "steps": {"type": "integer", "description": "可选：步数，默认 35。", "default": 35},
         "cfg": {"type": "number", "description": "可选：CFG，默认 4.5。", "default": 4.5},
         "sampler_name": {"type": "string", "description": "可选：采样器，默认 er_sde。", "default": "er_sde"},
         "seed": {"type": "integer", "description": "可选：随机种子。不填则每次生成都随机。"},
@@ -129,7 +129,7 @@ TOOL_SCHEMA = {
             "description": "高级：VAE 文件名，默认 Anima VAE。用 list_anima_models(model_type=vae) 查询。",
         },
     },
-    "required": ["quality_meta_year_safe", "count", "artist", "tags", "neg"]
+    "required": ["quality_meta_year_safe", "count", "tags", "neg"]
 }
 
 

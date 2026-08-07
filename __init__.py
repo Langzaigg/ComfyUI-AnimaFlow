@@ -1,11 +1,21 @@
 """
 ComfyUI-AnimaTool：随 ComfyUI 启动的 Anima Tool Use API
 
-路由：
-  POST /anima/generate   - 执行生成（接收结构化 JSON）
-  GET  /anima/schema     - 返回 Tool Schema
-  GET  /anima/knowledge  - 返回专家知识
-  GET  /anima/health     - 健康检查
+主 API（推荐）：
+  GET  /anima/workflows        - 列出所有可用工作流
+  GET  /anima/schema           - 返回 Tool Schema（?workflow= 选择工作流，缺省 base）
+  GET  /anima/knowledge        - 返回专家知识（?workflow= 选择工作流，缺省 base）
+  POST /anima/generate         - 执行生成（body/query 中 workflow 选择工作流，缺省 base）
+
+兼容性接口（保持不变，等价于 workflow 参数的固定写法）：
+  POST /anima/generate_turbo   - Turbo 0.2 快速生成（cfg=1, steps=10, 内置 turbo LoRA）
+  GET  /anima/schema_turbo     - 返回 Turbo 0.2 Tool Schema
+  GET  /anima/knowledge_turbo  - 返回 Turbo 0.2 专家知识
+  POST /anima/generate_turbo_v1 - Anima Turbo v1.0 生成
+  POST /anima/generate_aesthetic_v1 - Anima Aesthetic v1.0 生成
+  GET  /anima/schema_turbo_v1  - 返回 Turbo v1.0 Schema
+  GET  /anima/schema_aesthetic_v1 - 返回 Aesthetic v1.0 Schema
+  GET  /anima/knowledge_new_models - 返回新模型共享专家知识
 """
 from __future__ import annotations
 
@@ -34,6 +44,96 @@ def _read_text(path: Path) -> str:
 
 
 _TOOL_ROOT = Path(__file__).resolve().parent
+_SCHEMA_DIR = _TOOL_ROOT / "schemas"
+_KNOWLEDGE_DIR = _TOOL_ROOT / "knowledge"
+
+# Turbo v1.0 / Aesthetic v1.0 共享同一套专家知识
+_NEW_MODELS_KNOWLEDGE = {
+    "new_models_expert": "new_models_expert.md",
+    "artist_list": "artist_list.md",
+    "new_models_examples": "new_models_examples.md",
+}
+
+# kira / kira_turbo 共享同一套专家知识
+_KIRA_KNOWLEDGE = {
+    "kira_expert": "kira_expert.md",
+    "artist_list": "artist_list.md",
+    "kira_examples": "kira_examples.md",
+}
+
+# 工作流注册表：主 API 通过 workflow 参数分发，缺省为 base。
+# 每个工作流声明自己的 schema 文件、知识文件与生成方式。
+WORKFLOWS = {
+    "base": {
+        "description": "Base 1.0：完整字段工作流（默认）",
+        "schema": "tool_schema_universal.json",
+        "knowledge": {
+            "anima_expert": "anima_expert.md",
+            "artist_list": "artist_list.md",
+            "prompt_examples": "prompt_examples.md",
+        },
+    },
+    "turbo": {
+        "description": "Turbo 0.2（Legacy）：base UNET + turbo LoRA 快速生成（cfg=1, steps=10）",
+        "schema": "tool_schema_turbo.json",
+        "knowledge": {
+            "turbo_expert": "turbo_expert.md",
+            "artist_list": "artist_list.md",
+            "turbo_examples": "turbo_examples.md",
+        },
+    },
+    "turbo_v1": {
+        "description": "Turbo 1.0：独立完整 UNET 快速生成（cfg 0.7-1, steps 8-12）",
+        "schema": "tool_schema_turbo_v1.json",
+        "knowledge": _NEW_MODELS_KNOWLEDGE,
+    },
+    "aesthetic_v1": {
+        "description": "Aesthetic 1.0：高质量微调完整 UNET（cfg 3-8, steps 20-60）",
+        "schema": "tool_schema_aesthetic_v1.json",
+        "knowledge": _NEW_MODELS_KNOWLEDGE,
+    },
+    "kira": {
+        "description": "Kira (Kirazuri Anima v4)：Anima 微调完整 UNET（cfg 4-5, steps 30-50, er_sde）",
+        "schema": "tool_schema_kira.json",
+        "knowledge": _KIRA_KNOWLEDGE,
+    },
+    "kira_turbo": {
+        "description": "Kira Turbo：Kira + 8-step LoRA 快速生成（cfg=1, steps=8, 默认 1024x1024）",
+        "schema": "tool_schema_kira_turbo.json",
+        "knowledge": _KIRA_KNOWLEDGE,
+    },
+}
+
+DEFAULT_WORKFLOW = "base"
+
+
+def _schema_response(workflow: str) -> web.Response:
+    schema_path = _SCHEMA_DIR / WORKFLOWS[workflow]["schema"]
+    if not schema_path.exists():
+        return web.json_response({"error": f"schema not found: {workflow}"}, status=404)
+    obj = json.loads(schema_path.read_text(encoding="utf-8"))
+    return web.json_response(obj)
+
+
+def _knowledge_response(workflow: str) -> web.Response:
+    return web.json_response({
+        key: _read_text(_KNOWLEDGE_DIR / filename)
+        for key, filename in WORKFLOWS[workflow]["knowledge"].items()
+    })
+
+
+def _generate_dispatch(executor: AnimaExecutor, workflow: str, payload: dict):
+    if workflow == "turbo":
+        return executor.generate_turbo(payload)
+    if workflow == "turbo_v1":
+        return executor.generate_v2(payload, "turbo1.0")
+    if workflow == "aesthetic_v1":
+        return executor.generate_v2(payload, "aesthetic1.0")
+    if workflow == "kira":
+        return executor.generate_kira(payload)
+    if workflow == "kira_turbo":
+        return executor.generate_kira(payload, turbo=True)
+    return executor.generate(payload)
 
 
 def _setup_routes():
@@ -48,8 +148,19 @@ def _setup_routes():
     config = AnimaToolConfig()
     executor = AnimaExecutor(config=config)
 
-    knowledge_dir = _TOOL_ROOT / "knowledge"
-    schema_path = _TOOL_ROOT / "schemas" / "tool_schema_universal.json"
+    def _resolve_workflow(request, body: dict | None = None):
+        """解析 workflow 参数：query 优先，其次 body 顶层，缺省 base。非法值返回 None。"""
+        workflow = request.query.get("workflow")
+        if not workflow and isinstance(body, dict):
+            workflow = body.get("workflow")
+        workflow = (workflow or DEFAULT_WORKFLOW).strip()
+        return workflow if workflow in WORKFLOWS else None
+
+    def _unknown_workflow_response(request, body: dict | None = None) -> web.Response:
+        return web.json_response(
+            {"error": f"未知 workflow，可选值：{list(WORKFLOWS)}（缺省 {DEFAULT_WORKFLOW}）"},
+            status=400,
+        )
 
     # -------------------------
     # GET /anima/health
@@ -63,28 +174,40 @@ def _setup_routes():
         })
 
     # -------------------------
-    # GET /anima/schema
+    # GET /anima/workflows：列出所有可用工作流
     # -------------------------
-    @routes.get("/anima/schema")
-    async def anima_schema(request):
-        if not schema_path.exists():
-            return web.json_response({"error": "schema not found"}, status=404)
-        obj = json.loads(schema_path.read_text(encoding="utf-8"))
-        return web.json_response(obj)
-
-    # -------------------------
-    # GET /anima/knowledge
-    # -------------------------
-    @routes.get("/anima/knowledge")
-    async def anima_knowledge(request):
+    @routes.get("/anima/workflows")
+    async def anima_workflows(request):
         return web.json_response({
-            "anima_expert": _read_text(knowledge_dir / "anima_expert.md"),
-            "artist_list": _read_text(knowledge_dir / "artist_list.md"),
-            "prompt_examples": _read_text(knowledge_dir / "prompt_examples.md"),
+            "default": DEFAULT_WORKFLOW,
+            "workflows": {
+                name: {"description": info["description"]}
+                for name, info in WORKFLOWS.items()
+            },
         })
 
     # -------------------------
-    # POST /anima/generate
+    # GET /anima/schema（主 API，?workflow= 选择，缺省 base）
+    # -------------------------
+    @routes.get("/anima/schema")
+    async def anima_schema(request):
+        workflow = _resolve_workflow(request)
+        if workflow is None:
+            return _unknown_workflow_response(request)
+        return _schema_response(workflow)
+
+    # -------------------------
+    # GET /anima/knowledge（主 API，?workflow= 选择，缺省 base）
+    # -------------------------
+    @routes.get("/anima/knowledge")
+    async def anima_knowledge(request):
+        workflow = _resolve_workflow(request)
+        if workflow is None:
+            return _unknown_workflow_response(request)
+        return _knowledge_response(workflow)
+
+    # -------------------------
+    # POST /anima/generate（主 API，workflow 选择，缺省 base）
     # -------------------------
     @routes.post("/anima/generate")
     async def anima_generate(request):
@@ -99,15 +222,101 @@ def _setup_routes():
         else:
             payload = body
 
+        workflow = _resolve_workflow(request, body)
+        if workflow is None:
+            return _unknown_workflow_response(request, body)
+        # workflow 是路由参数，不属于生成 payload
+        payload.pop("workflow", None)
+
         try:
             # 在线程池中执行同步阻塞操作，避免阻塞 aiohttp 事件循环
-            result = await asyncio.to_thread(executor.generate, payload)
+            result = await asyncio.to_thread(_generate_dispatch, executor, workflow, payload)
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
 
         return web.json_response(result)
 
-    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/schema, /anima/knowledge, /anima/generate")
+    # -------------------------
+    # 兼容性接口：等价于 workflow 参数的固定写法，保持不变
+    # -------------------------
+    @routes.get("/anima/schema_turbo")
+    async def anima_schema_turbo(request):
+        return _schema_response("turbo")
+
+    @routes.get("/anima/knowledge_turbo")
+    async def anima_knowledge_turbo(request):
+        return _knowledge_response("turbo")
+
+    @routes.post("/anima/generate_turbo")
+    async def anima_generate_turbo(request):
+        try:
+            body = await request.json()
+        except Exception as e:
+            return web.json_response({"error": f"JSON parse error: {e}"}, status=400)
+
+        if "payload" in body and isinstance(body["payload"], dict):
+            payload = body["payload"]
+        else:
+            payload = body
+
+        try:
+            result = await asyncio.to_thread(executor.generate_turbo, payload)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
+        return web.json_response(result)
+
+    @routes.post("/anima/generate_turbo_v1")
+    async def anima_generate_turbo_v1(request):
+        try:
+            body = await request.json()
+        except Exception as e:
+            return web.json_response({"error": f"JSON parse error: {e}"}, status=400)
+
+        if "payload" in body and isinstance(body["payload"], dict):
+            payload = body["payload"]
+        else:
+            payload = body
+
+        try:
+            result = await asyncio.to_thread(executor.generate_v2, payload, "turbo1.0")
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
+        return web.json_response(result)
+
+    @routes.post("/anima/generate_aesthetic_v1")
+    async def anima_generate_aesthetic_v1(request):
+        try:
+            body = await request.json()
+        except Exception as e:
+            return web.json_response({"error": f"JSON parse error: {e}"}, status=400)
+
+        if "payload" in body and isinstance(body["payload"], dict):
+            payload = body["payload"]
+        else:
+            payload = body
+
+        try:
+            result = await asyncio.to_thread(executor.generate_v2, payload, "aesthetic1.0")
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
+        return web.json_response(result)
+
+    @routes.get("/anima/schema_turbo_v1")
+    async def anima_schema_turbo_v1(request):
+        return _schema_response("turbo_v1")
+
+    @routes.get("/anima/schema_aesthetic_v1")
+    async def anima_schema_aesthetic_v1(request):
+        return _schema_response("aesthetic_v1")
+
+    @routes.get("/anima/knowledge_new_models")
+    async def anima_knowledge_new_models(request):
+        return _knowledge_response("turbo_v1")
+
+    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/schema_turbo, /anima/knowledge_turbo, /anima/generate_turbo, /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口)")
 
 
 # ComfyUI 加载 custom_nodes 时会 import 这个模块

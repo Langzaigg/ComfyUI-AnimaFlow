@@ -38,10 +38,26 @@ def _get_env_int(key: str, default: int) -> int:
     return default
 
 
-# 默认模型文件名
+# 默认模型文件名（preview 版本）
 DEFAULT_UNET_NAME = "anima-preview.safetensors"
 DEFAULT_CLIP_NAME = "qwen_3_06b_base.safetensors"
 DEFAULT_VAE_NAME = "qwen_image_vae.safetensors"
+
+# base v1.0 模型文件名
+BASE10_UNET_NAME = "anima-base-v1.0.safetensors"
+
+# 新模型 v1.0 文件名
+TURBO10_UNET_NAME = "anima-turbo-v1.0.safetensors"
+AESTHETIC10_UNET_NAME = "anima-aesthetic-v1.0.safetensors"
+
+# Kira (Kirazuri Anima v4) 模型文件名
+KIRA_UNET_NAME = "anima-kirazuri-v4.safetensors"
+# Kira Turbo 8-step LoRA 文件名
+KIRA_TURBO_LORA_NAME = "kirazuri-anima-turbo-v4-8step.safetensors"
+# Kira Turbo 采样组合：主用 res_2s+bong_tangent（需 RES4LYF 节点，指令遵循度实测最高）；
+# 不可用（节点未安装 / 设备不支持 fp64）时自动回落 res_multistep+simple
+KIRA_TURBO_SAMPLER = ("res_2s", "bong_tangent")
+KIRA_TURBO_SAMPLER_FALLBACK = ("res_multistep", "simple")
 
 
 @dataclass
@@ -103,9 +119,25 @@ class AnimaToolConfig:
         default_factory=lambda: _get_env_float("ANIMATOOL_POLL_INTERVAL", 1.0)
     )
 
+    # 月份切换后（当月第一个图片任务）自动清理 ComfyUI 原生 output 目录，
+    # 使图片编号从 00001 重新计数；配合 outputs/YYYY-MM/ 按月归档，
+    # 避免编号重置后与月份文件夹内同名旧图覆盖（预览依赖归档副本，不受清理影响）。
+    # 可用 ANIMATOOL_CLEAN_OUTPUT_MONTHLY=0 关闭。
+    clean_output_monthly: bool = field(
+        default_factory=lambda: _get_env_bool("ANIMATOOL_CLEAN_OUTPUT_MONTHLY", True)
+    )
+    # ComfyUI 原生 output 目录；留空时优先从 ComfyUI 的 folder_paths 自动探测，
+    # 探测失败（独立进程/远程场景）则跳过清理。可用 ANIMATOOL_COMFYUI_OUTPUT_DIR 手动指定。
+    comfyui_output_dir: Optional[Path] = field(
+        default_factory=lambda: (
+            Path(os.environ["ANIMATOOL_COMFYUI_OUTPUT_DIR"])
+            if os.environ.get("ANIMATOOL_COMFYUI_OUTPUT_DIR") else None
+        )
+    )
+
     # 分辨率生成：当只给 aspect_ratio 时，按目标像素数估算宽高
     target_megapixels: float = field(
-        default_factory=lambda: _get_env_float("ANIMATOOL_TARGET_MP", 1.0)
+        default_factory=lambda: _get_env_float("ANIMATOOL_TARGET_MP", 1.048576)
     )
     # 宽高向上取整到 round_to 的倍数
     # 注意：Anima 基于 Cosmos 架构，VAE 缩放 8 倍后还需被 spatial_patch_size=2 整除

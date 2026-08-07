@@ -20,11 +20,11 @@
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
-| `quality_meta_year_safe` | 质量、年份、安全标签 | `masterpiece, best quality, newest, year 2024, safe` |
+| `quality_meta_year_safe` | 质量、年份、安全标签 | `masterpiece, best quality, newest, year 2025, sensitive` |
 | `count` | 人数 | `1girl`, `2girls`, `1boy`, `no humans` |
 | `character` | 角色名 | `hatsune miku`, `serena (pokemon)` |
 | `series` | 作品名 | `vocaloid`, `pokemon` |
-| `artist` | 画师（必须带 @） | `@fkey, @jima` |
+| `artist` | 画师（可选，用户明确要求时才填） | `@fkey` |
 | `style` | 画风 | `anime illustration`, `watercolor` |
 | `appearance` | 外观 | `long hair, blue eyes, twintails` |
 | `tags` | 核心标签 | `upper body, smile, white dress` |
@@ -36,7 +36,7 @@
 ### 正面（推荐组合）
 
 ```
-masterpiece, best quality, highres, newest, year 2024
+masterpiece, best quality, highres, newest, year 2025
 ```
 
 ### 负面（基础模板）
@@ -92,9 +92,9 @@ worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, b
 ```json
 {
   "aspect_ratio": "3:4",
-  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2024, safe",
+  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2025, sensitive",
   "count": "1girl",
-  "artist": "@fkey, @jima",
+  "artist": "@fkey",
   "tags": "upper body, smile, white dress",
   "neg": "worst quality, low quality, blurry, bad hands, nsfw"
 }
@@ -105,7 +105,7 @@ worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, b
 ```json
 {
   "aspect_ratio": "9:16",
-  "quality_meta_year_safe": "masterpiece, best quality, highres, newest, year 2024, safe",
+  "quality_meta_year_safe": "masterpiece, best quality, highres, newest, year 2025, sensitive",
   "count": "1girl",
   "character": "hatsune miku",
   "series": "vocaloid",
@@ -123,9 +123,9 @@ worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, b
 ```json
 {
   "aspect_ratio": "16:9",
-  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2024, safe",
+  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2025, sensitive",
   "count": "no humans",
-  "artist": "@fkey",
+  "artist": "@mignon",
   "style": "anime background, scenic",
   "tags": "landscape, mountain, lake, reflection, clouds",
   "environment": "sunset, golden hour, dramatic lighting",
@@ -160,7 +160,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8188/models/loras"
 ```json
 {
   "aspect_ratio": "3:4",
-  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2024, safe",
+  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2025, sensitive",
   "count": "1girl",
   "artist": "@fkey",
   "tags": "full body, fantasy outfit, glowing",
@@ -224,9 +224,9 @@ anthro, furry
 {
   "repeat": 3,
   "aspect_ratio": "3:4",
-  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2024, safe",
+  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2025, sensitive",
   "count": "1girl",
-  "artist": "@fkey",
+  "artist": "@jima",
   "tags": "upper body, smile",
   "neg": "worst quality, low quality, blurry"
 }

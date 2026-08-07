@@ -1,4 +1,6 @@
-# ComfyUI-AnimaTool
+# AnimaFlow
+
+> 前身 ComfyUI-AnimaTool。现已扩展为多模型、多工作流的统一 Tool Use API（base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo）。
 
 > [!NOTE]
 > **今日更新**
@@ -22,7 +24,7 @@
 > - **性能修复 v2**：解决多轮出图后严重卡顿问题 — IPC 排除大 slice + base64 就地 strip（修复了 v1.7.16-preview2 中 Zod safeParse 克隆导致 strip 无效的问题）— [上游 PR #12766](https://github.com/CherryHQ/cherry-studio/pull/12766)
 
 <p align="center">
-  <img src="assets/hero.webp" alt="ComfyUI-AnimaTool Demo" width="100%">
+  <img src="assets/hero.webp" alt="AnimaFlow Demo" width="100%">
 </p>
 
 <p align="center">
@@ -57,15 +59,15 @@
 
 ### SillyTavern 全家桶
 
-在 SillyTavern（酒馆）中使用 AnimaTool 生成图片？推荐安装以下配套插件：
+在 SillyTavern（酒馆）中使用 AnimaFlow 生成图片？推荐安装以下配套插件：
 
 | 项目 | 说明 |
 |------|------|
-| [SillyTavern MCP Client](https://github.com/Moeblack/sillytavern-mcp-client) | 酒馆 MCP 客户端，连接 AnimaTool 等 MCP Server，支持 stdio + Streamable HTTP |
+| [SillyTavern MCP Client](https://github.com/Moeblack/sillytavern-mcp-client) | 酒馆 MCP 客户端，连接 AnimaFlow 等 MCP Server，支持 stdio + Streamable HTTP |
 | [SillyTavern Tool Use Fix](https://github.com/Moeblack/sillytavern-tooluse-fix) | 工具调用体验修复，合并碎片消息、图片直接显示在对话中 |
 
 ```
-ComfyUI-AnimaTool (本项目，MCP Server)
+AnimaFlow (本项目，MCP Server)
         ↕ MCP 协议 (stdio / streamable-http)
 SillyTavern MCP Client (连接 + 工具注册)
         ↕ SillyTavern Tool Calling
@@ -120,7 +122,7 @@ Tool Use Fix (合并显示 + 体验优化)
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/Moeblack/ComfyUI-AnimaTool.git
-pip install -r ComfyUI-AnimaTool/requirements.txt
+pip install -r ComfyUI-AnimaFlow/requirements.txt
 ```
 
 ### Prerequisites
@@ -204,7 +206,7 @@ pip install -e ./animatool-mcp
   "mcpServers": {
     "anima-tool": {
       "command": "<PATH_TO_PYTHON>",
-      "args": ["<PATH_TO>/ComfyUI-AnimaTool/servers/mcp_server.py"]
+      "args": ["<PATH_TO>/ComfyUI-AnimaFlow/servers/mcp_server.py"]
     }
   }
 }
@@ -217,7 +219,7 @@ pip install -e ./animatool-mcp
   "mcpServers": {
     "anima-tool": {
       "command": "C:\\ComfyUI\\.venv\\Scripts\\python.exe",
-      "args": ["C:\\ComfyUI\\custom_nodes\\ComfyUI-AnimaTool\\servers\\mcp_server.py"]
+      "args": ["C:\\ComfyUI\\custom_nodes\\ComfyUI-AnimaFlow\\servers\\mcp_server.py"]
     }
   }
 }
@@ -245,12 +247,28 @@ pip install mcp
 
 启动 ComfyUI 后，以下路由自动注册：
 
+主 API 通过 `workflow` 参数（`base` / `turbo` / `turbo_v1` / `aesthetic_v1` / `kira` / `kira_turbo`，缺省 `base`）返回/使用各个不同工作流的信息：
+
 | 路由 | 方法 | 说明 |
 |------|------|------|
 | `/anima/health` | GET | 健康检查 |
-| `/anima/schema` | GET | Tool Schema |
-| `/anima/knowledge` | GET | 专家知识 |
-| `/anima/generate` | POST | 执行生成（支持 `repeat` 批量） |
+| `/anima/workflows` | GET | 列出所有可用工作流 |
+| `/anima/schema` | GET | Tool Schema（`?workflow=` 选择工作流，缺省 base） |
+| `/anima/knowledge` | GET | 专家知识（`?workflow=` 选择工作流，缺省 base） |
+| `/anima/generate` | POST | 生成（`?workflow=` 或 body 顶层 `workflow` 字段选择工作流，缺省 base；支持 `repeat` 批量） |
+
+兼容性接口（保持不变，等价于主 API 固定 workflow 的写法）：
+
+| 路由 | 方法 | 说明 |
+|------|------|------|
+| `/anima/schema_turbo` | GET | Turbo 0.2 Schema |
+| `/anima/knowledge_turbo` | GET | Turbo 0.2 专家知识 |
+| `/anima/generate_turbo` | POST | Turbo 0.2 快速生成（LoRA + cfg=1 + steps=10） |
+| `/anima/schema_turbo_v1` | GET | Turbo 1.0 Schema |
+| `/anima/generate_turbo_v1` | POST | Turbo 1.0 生成（独立 UNET，cfg 0.7-1，steps 8-12） |
+| `/anima/schema_aesthetic_v1` | GET | Aesthetic 1.0 Schema |
+| `/anima/generate_aesthetic_v1` | POST | Aesthetic 1.0 生成（高质量微调，cfg 3-8，steps 20-60） |
+| `/anima/knowledge_new_models` | GET | Turbo 1.0 / Aesthetic 1.0 共享专家知识 |
 | `/anima/history` | GET | 查看最近生成历史 |
 | `/anima/reroll` | POST | 基于历史记录重新生成 |
 
@@ -261,9 +279,9 @@ pip install mcp
 ```powershell
 $body = @{
     aspect_ratio = "3:4"
-    quality_meta_year_safe = "masterpiece, best quality, newest, year 2024, safe"
+    quality_meta_year_safe = "masterpiece, best quality, newest, year 2025, sensitive"
     count = "1girl"
-    artist = "@fkey, @jima"
+    artist = "@rurudo"
     tags = "upper body, smile, white dress"
     neg = "worst quality, low quality, blurry, bad hands, nsfw"
 } | ConvertTo-Json -Depth 10
@@ -276,7 +294,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8188/anima/generate" -Method Post -Body
 ```bash
 curl -X POST http://127.0.0.1:8188/anima/generate \
   -H "Content-Type: application/json" \
-  -d '{"aspect_ratio":"3:4","quality_meta_year_safe":"masterpiece, best quality, newest, year 2024, safe","count":"1girl","artist":"@fkey, @jima","tags":"upper body, smile, white dress","neg":"worst quality, low quality, blurry, bad hands, nsfw"}'
+  -d '{"aspect_ratio":"3:4","quality_meta_year_safe":"masterpiece, best quality, newest, year 2025, sensitive","count":"1girl","artist":"@rurudo","tags":"upper body, smile, white dress","neg":"worst quality, low quality, blurry, bad hands, nsfw"}'
 ```
 
 ---
@@ -284,7 +302,7 @@ curl -X POST http://127.0.0.1:8188/anima/generate \
 ### 方式 3：独立 FastAPI Server
 
 ```bash
-cd ComfyUI-AnimaTool
+cd ComfyUI-AnimaFlow
 pip install fastapi uvicorn
 python -m servers.http_server
 ```
@@ -359,7 +377,7 @@ python -m servers.http_server
 ```json
 {
   "aspect_ratio": "3:4",
-  "quality_meta_year_safe": "newest, year 2024, safe",
+  "quality_meta_year_safe": "newest, year 2025, sensitive",
   "count": "1girl",
   "character": "kaguya",
   "series": "cosmic princess kaguya",
@@ -408,7 +426,7 @@ python -m servers.http_server
 ## Directory Structure
 
 ```
-ComfyUI-AnimaTool/
+ComfyUI-AnimaFlow/
 ├── __init__.py           # ComfyUI extension（注册 /anima/* 路由）
 ├── executor/             # 核心执行器
 │   ├── anima_executor.py
@@ -470,7 +488,7 @@ ComfyUI-AnimaTool/
   "mcpServers": {
     "anima-tool": {
       "command": "C:\\ComfyUI\\.venv\\Scripts\\python.exe",
-      "args": ["C:\\ComfyUI\\custom_nodes\\ComfyUI-AnimaTool\\servers\\mcp_server.py"],
+      "args": ["C:\\ComfyUI\\custom_nodes\\ComfyUI-AnimaFlow\\servers\\mcp_server.py"],
       "env": {
         "COMFYUI_URL": "http://127.0.0.1:8188",
         "COMFYUI_MODELS_DIR": "C:\\ComfyUI\\models"

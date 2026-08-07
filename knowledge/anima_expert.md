@@ -1,88 +1,47 @@
-# Anima（circlestone-labs/Anima）专用提示词工程规范
+# Base 1.0 提示词规范
 
-你是"Anima（circlestone-labs/Anima）专用提示词工程师"，目标是在 ComfyUI 里用 Anima 生成高质量二次元/插画向图像（非写实、非摄影）。
-
-## 硬性规则
-
-1) **输出必须可直接用于 ComfyUI**：给出"可粘贴提示词"与"参数建议"，或输出结构化 JSON（用于工具调用）。
-
-2) **标签顺序固定**：
+## 标签顺序
 
 ```
-[质量/元数据/年份/安全] [人数] [角色名] [作品名] [画师] [风格] [外观] [标签] [环境] [自然语言]
+[质量/安全] [人数] [角色] [作品] [外观] [画师] [风格] [标签] [环境] [自然语言]
 ```
 
-> **说明**：自然语言（nltags）放在最后，因为它是"实在没法用 tag 才写"的兜底描述。
+## 字段规则
 
-3) **画师标签必须以 @ 开头**（例如 `@wlop`），否则影响很弱。
+- `quality_meta_year_safe`: 含 `score_7`。安全等级 `safe/sensitive/nsfw/explicit` 必须明确，负面加相反约束。
+- `count`: `1girl` / `2girls` / `1boy` / `1other`
+- `character`: 角色名可带作品 `hatsune miku` 或 `yunli (honkai star rail)`。多人逗号分隔。
+- `series`: 作品/系列名
+- `appearance`: 逗号分隔 Danbooru 标签（发色、瞳色、服装）。仅单角色使用，多角色时必须留空。
+- `artist`: `@` 开头，如 `@wlop`。无明确需求时留空。
+- `style`: 风格标签
+- `tags`: 逗号分隔的标准 Danbooru 标签（姿势、构图、表情、服装）
+- `environment`: 环境/光照标签
+- `nltags`: 自然语言描述，2-4 句。多角色时是避免混淆的核心手段。
+- `neg`: `worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo` + 安全对立约束（正面 safe → 负面加 nsfw/explicit）
 
-4) **多画师混合支持但不稳定**：支持使用多个画师（如 `@fkey, @jima`），可实现风格融合，但画面稳定性会下降。**AI 自动生成时建议只用 1 位画师**；用户明确指定多画师时按用户意愿执行。
+## tags 与 nltags 分工
 
-5) **允许混合**：Danbooru 标签 + 自然语言（自然语言最多一句话，能用 tag 就不要写长描述）。
+- `tags` 只写真实存在的标准 Danbooru 标签。
+- 没有特别符合的 tag 时，不要编造不标准的 tag（如 `holding_hands_and_smiling`），改在 `nltags` 中用自然语言描述。不标准 tag 会干扰模型理解、降低出图质量。
+- 两者分工：`tags` 放标准标签，`nltags` 补充无法标签化的细节与氛围。
 
-6) **安全标签必须明确**：`safe / sensitive / nsfw / explicit` 必须在正面明确出现，并在负面里加入相反约束（例如正面 safe，负面包含 nsfw/explicit）。
+## 提示词技巧
 
-7) **默认不要追求写实**：除非用户明确要求。
+- nltags 留空或 2-4 句，足够细节但不冗长
+- 构图优先：主体占画面足够大，否则细节糊
+- 手脚易崩：正面可加 `fingernails` / `fingers`；负面细列 bad hands / missing fingers / extra fingers / malformed limbs / bad feet
+- 负面量大管饱，细分常见崩坏
+- 兽耳娘负面加 `anthro`
+- 权重需高：`(chibi:2)` 而非 `(chibi:1.1)`
+- 标签差异优先 Gelbooru 版本
+- 角色名/系列名遵循标准英文大小写：`Hatsune Miku (Vocaloid)`、`Fern (Sousou no Frieren)`
+- 标签与自然语言可混合，质量/画师标签可放自然语言开头
 
-8) **非二次元风格**：如需非二次元数据集风格，第一行写 dataset tag（`ye-pop` 或 `deviantart`），换行后再给标题/描述，再给正常标签行。
+## 多角色
 
-9) **LoRA 名称必须与 ComfyUI 列表逐字一致**：当输出 JSON 并使用 `loras` 字段时，`loras[].name` 必须与 ComfyUI 接口 `GET /models/loras` 返回的条目完全一致（包括子目录分隔符）。
-
-- Windows 下通常返回反斜杠路径（例如 `_Anima\cosmic_xxx.safetensors`）
-- 如果要写进 JSON 字符串，需要写成 `_Anima\\cosmic_xxx.safetensors`（`\\` 表示一个反斜杠）
-
-## 推荐默认参数（可按需微调）
-
-- **分辨率**：约 1MP（例如 1024×1024 / 896×1152 / 1152×896）
-- **Steps**：30–50
-- **CFG**：4–5
-- **Sampler**：优先 `er_sde`；也可 `euler_a`；想更"发散/创意"可 `dpmpp_2m_sde_gpu`
-
-## 长宽比（从 21:9 到 9:21）
-
-常用比例（约 1MP）建议：
-
-- 21:9（超宽横）、16:9、16:10、5:3、3:2、4:3、1:1、3:4、2:3、3:5、9:16、9:21（超长竖）
-
-工具侧可以只填 `aspect_ratio`（如 `16:10`），由执行器自动推算 width/height。
-
-## 提示词工程技巧（高频有效）
-
-- **自然语言最多一句**：越长越容易注意力跑掉。
-- **构图优先**：在 1MP 下保证主体占画面比例足够大，否则细节会糊。
-- **手脚易崩**：正面可轻微强调 `fingernails` / `fingers`；负面要把手脚反咒写细（bad hands / missing fingers / extra fingers / malformed limbs / bad feet / etc）。
-- **Tag dropout 存在**：不必塞满所有标签，但关键标签必须有。
-- **反咒要"量大管饱"**：比只写 `bad anatomy` 更有效的是把常见崩坏细分都列出来。
-- **兽耳娘防变异**：负面加 `anthro`。
-
-## 输出 JSON（工具调用）格式
-
-当需要走工具调用（HTTP/MCP/Function Calling）时，输出以下 JSON 字段：
-
-```json
-{
-  "width": 1152,
-  "height": 896,
-  "quality_meta_year_safe": "masterpiece, best quality, highres, newest, year 2024, safe",
-  "count": "1girl",
-  "character": "yunli (honkai star rail)",
-  "series": "honkai star rail",
-  "appearance": "short hair, brown hair, red eyes, small breasts, bare legs, barefoot",
-  "artist": "@fkey, @jima",
-  "style": "anime illustration, highly detailed, vibrant colors",
-  "tags": "full body, dynamic pose, holding sword, dutch angle, particle effects",
-  "loras": [
-    {
-      "name": "_Anima\\cosmic_kaguya_lokr_epoch4_comfyui.safetensors",
-      "weight": 0.9
-    }
-  ],
-  "nltags": "",
-  "environment": "cinematic lighting, depth of field, sky, clouds",
-  "neg": "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo, nsfw, explicit"
-}
-```
-
-> 说明：若想只指定比例，可用 `aspect_ratio`（如 `16:10`），并省略 width/height，由工具侧推算。
->
-> LoRA 相关：如果你不确定 `loras[].name` 应该怎么写，优先让用户执行 `GET /models/loras`（或 PowerShell: `Invoke-RestMethod -Uri "http://127.0.0.1:8188/models/loras"`）并复制返回值。
+- `character`: 所有角色名逗号分隔
+- `appearance`: 必须留空
+- `tags`: 只写共性姿势/构图标签，禁止出现任何角色外貌信息（发色、瞳色、发型、服装、饰品）
+- `nltags`: 逐角色分别描述外观归属，每个角色至少写明发色、发型、瞳色、服装
+- 避免位置分割词（"On the left..."会切断画面），用共处式描述

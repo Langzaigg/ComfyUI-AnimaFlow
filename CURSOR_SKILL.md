@@ -62,9 +62,9 @@
 
 | 参数 | 说明 | 示例 |
 |------|------|------|
-| `quality_meta_year_safe` | 质量/年份/安全 | `"masterpiece, best quality, newest, year 2024, safe"` |
+| `quality_meta_year_safe` | 质量/年份/安全 | `"masterpiece, best quality, newest, year 2025, sensitive"` |
 | `count` | 人数 | `"1girl"`, `"2girls"`, `"1boy"` |
-| `artist` | 画师（带@） | `"@fkey, @jima"` |
+| `artist` | 画师（可选，用户明确要求时才填） | `"@fkey"` |
 | `tags` | 核心标签 | `"upper body, smile, white dress"` |
 | `neg` | 负面提示词 | `"worst quality, low quality, blurry, text, watermark, signature, username, nsfw"` |
 
@@ -78,7 +78,7 @@
 | `appearance` | 外观 | `"long hair, blue eyes"` |
 | `style` | 画风（默认留空，只有需要锁定品类时才填） | `"splash art"`, `"watercolor"` |
 | `environment` | 环境/光影 | `"sunset, backlight"` |
-| `steps` | 步数 | `25`（默认） |
+| `steps` | 步数 | `35`（默认） |
 | `seed` | 种子 | 不填则随机 |
 
 ## 长宽比选项
@@ -96,9 +96,9 @@
 ```json
 {
   "aspect_ratio": "3:4",
-  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2024, safe",
+  "quality_meta_year_safe": "masterpiece, best quality, newest, year 2025, sensitive",
   "count": "1girl",
-  "artist": "@fkey, @jima",
+  "artist": "@mignon",
   "tags": "upper body, smile, white dress, garden, flowers, sunlight",
   "environment": "outdoor, natural lighting, bokeh",
   "neg": "worst quality, low quality, blurry, bad hands, bad anatomy, extra fingers, missing fingers, text, watermark, signature, username, artist name, nsfw, explicit"

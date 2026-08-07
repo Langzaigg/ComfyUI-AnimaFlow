@@ -1,0 +1,105 @@
+{
+  "name": "generate_anima_turbo_v1",
+  "description": "Anima Turbo v1.0 快速生成接口。使用简化字段生成二次元插画。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "quality_meta_year_safe": {
+        "type": "string",
+        "description": "质量标签与安全等级。格式：'masterpiece, best quality, <safe/sensitive/nsfw/explicit>'。安全等级必须明确。",
+        "default": "masterpiece, best quality, safe"
+      },
+      "count": {
+        "type": "string",
+        "description": "人数标签，如 '1girl' / '2girls' / '1boy' / '1other'。",
+        "default": "1girl"
+      },
+      "character": {
+        "type": "string",
+        "description": "角色名（可含括号作品信息），如 'hatsune miku' 或 'yunli (honkai star rail)'。",
+        "default": ""
+      },
+      "series": {
+        "type": "string",
+        "description": "作品/系列名，如 'vocaloid' / 'honkai star rail'。",
+        "default": ""
+      },
+      "appearance": {
+        "type": "string",
+        "description": "角色外观标签（逗号分隔的Danbooru标签）：发型发色、眼睛、服装、饰品等。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
+        "default": ""
+      },
+      "artist": {
+        "type": "string",
+        "description": "画师标签，必须以 @ 开头。如 '@makihitsuji'。无明确需求时留空。",
+        "default": ""
+      },
+      "tags": {
+        "type": "string",
+        "description": "通用标签：以标准 Danbooru 标签（逗号分隔）为主，描述场景、动作、服装、表情等；没有特别符合的标准 tag 时用英文自然语言句子补充，不要编造不标准 tag（会干扰模型理解）。多角色时禁止写任何角色外貌信息，外貌用自然语言逐角色分别描述。"
+      },
+      "neg": {
+        "type": "string",
+        "description": "负面提示词。safe/sensitive 时追加 'nsfw, explicit'；nsfw/explicit 时追加 'safe, sensitive, censored, mosaic'。同时包含 'worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo'。",
+        "default": ""
+      },
+      "cfg": {
+        "type": "number",
+        "description": "CFG 引导强度，范围 0.7-1。",
+        "default": 1,
+        "minimum": 0.7,
+        "maximum": 1
+      },
+      "steps": {
+        "type": "integer",
+        "description": "采样步数，范围 8-12。",
+        "default": 10,
+        "minimum": 8,
+        "maximum": 12
+      },
+      "aspect_ratio": {
+        "type": "string",
+        "description": "图片比例。默认 1:1。",
+        "enum": ["16:9", "3:2", "1:1", "2:3", "9:16"],
+        "default": "1:1"
+      },
+      "width": {
+        "type": "integer",
+        "description": "宽度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "height": {
+        "type": "integer",
+        "description": "高度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "批量生成数量。",
+        "default": 1,
+        "minimum": 1
+      },
+      "seed": {
+        "type": "integer",
+        "description": "随机种子。缺省则随机。",
+        "minimum": 0
+      },
+      "positive": {
+        "type": "string",
+        "description": "可选：直接提供最终正面提示词（覆盖结构化拼接）。通常不需要。",
+        "default": ""
+      },
+      "filename_prefix": {
+        "type": "string",
+        "description": "输出文件名前缀。",
+        "default": "AnimaTool_turbo_v1_"
+      }
+    },
+    "required": [
+      "quality_meta_year_safe",
+      "count",
+      "tags"
+    ],
+    "additionalProperties": false
+  }
+}

@@ -17,8 +17,9 @@
 - `@terasu_mc`
 - `@jima`
 - `@torino_aqua`
+- `@mignon`
+- `@rurudo`
 
 ## 使用建议
 
 - **优先选"你想要的主风格"画师**，其它风格用 tags/环境/光影补足，不要堆多个画师。
-- 如果你维护了 Autocomplete-Plus 的 `danbooru_tags_artist.csv`，建议直接用那份做选择器（更全面且能按热度排序）。

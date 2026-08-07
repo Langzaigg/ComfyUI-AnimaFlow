@@ -68,8 +68,8 @@
         0
       ],
       "seed": 0,
-      "steps": 25,
-      "cfg": 4.5,
+      "steps": 35,
+      "cfg": 4,
       "sampler_name": "er_sde",
       "scheduler": "simple",
       "denoise": 1.0

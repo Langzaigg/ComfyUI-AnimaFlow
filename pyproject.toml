@@ -1,7 +1,7 @@
 [project]
-name = "comfyui-animatool"
+name = "comfyui-animaflow"
 version = "1.0.0"
-description = "AI Tool Use API for Anima anime/illustration image generation. Supports MCP Server (native image display in Cursor/Claude), HTTP API, and CLI."
+description = "AnimaFlow（前身 ComfyUI-AnimaTool）：多模型多工作流的 AI Tool Use API，支持 Anima base/turbo/aesthetic 与 Kira 系列。支持 MCP Server（Cursor/Claude 原生显示图片）、HTTP API 和 CLI。"
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -37,7 +37,7 @@ Issues = "https://github.com/Moeblack/ComfyUI-AnimaTool/issues"
 
 [tool.comfy]
 PublisherId = "YOUR_PUBLISHER_ID"
-DisplayName = "Anima Tool"
+DisplayName = "AnimaFlow"
 Icon = "assets/screenshot.webp"
 
 [build-system]

@@ -76,6 +76,10 @@ pip install mcp
 
 详细配置见 [MCP Server 配置](MCP-Setup)。
 
+## kira_turbo 工作流额外依赖（可选）
+
+`kira_turbo` 工作流的主用采样组合为 `res_2s` + `bong_tangent`（官方推荐，指令遵循度实测最高），来自 **RES4LYF** 自定义节点。未安装 RES4LYF、或设备执行该组合报错（如 fp64 不支持）时无需处理——接口会自动回落到 ComfyUI 内置的 `res_multistep` + `simple` 完成生成（返回结果带 `sampler_fallback: true` 标记），但指令遵循度略逊于主组合。其余工作流（含 `kira`）无此依赖。
+
 ## 故障排除
 
 ### 模型加载失败？
