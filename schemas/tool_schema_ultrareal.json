@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_ultrareal",
-  "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3) 生成接口。Anima base1.0 的真实系微调，生成写实照片风图片（手机自拍/数码相机/胶片/VHS/单反），适合 cosplay、生活照、电影感场景。tags 填 @ 开头的相机/灯光/风格标签，nltags 填英文自然语言场景描述，quality_meta_year_safe 填安全等级 + @年份 + score_N。",
+  "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3) 生成接口。Anima base1.0 的真实系微调，生成写实照片风图片（手机自拍/数码相机/胶片/VHS/单反），适合生活照、写真、电影感场景。tags 填 @ 开头的相机/灯光/风格标签，nltags 填英文自然语言场景描述，quality_meta_year_safe 填安全等级 + @年份 + score_N。",
   "parameters": {
     "type": "object",
     "properties": {
@@ -11,7 +11,7 @@
       },
       "nltags": {
         "type": "string",
-        "description": "自然语言场景描述（Natural Language Description）：用英文完整句子描述人物、服装、姿势、表情、背景与光影，写足细节（2-4 句）。避免逗号分隔的标签堆叠（tag-soup）。示例：'A close-up portrait selfie of a young woman cosplaying Shiroko from Blue Archive, with short silver hair, wolf ears and a black scarf. She is looking at the camera with a calm expression. The background is a blurry classroom.'"
+        "description": "自然语言场景描述（Natural Language Description）：用英文完整句子描述人物、服装、姿势、表情、背景与光影，写足细节（2-4 句）。避免逗号分隔的标签堆叠（tag-soup）。示例：'A close-up portrait selfie of Shiroko from Blue Archive. She has short silver-grey hair, grey wolf ears and a black scarf. She is looking at the camera with a calm expression. The background is a blurry classroom.'"
       },
       "quality_meta_year_safe": {
         "type": "string",

@@ -2,13 +2,12 @@
 
 ## 核心规则
 
-1. `tags` 以标准 Danbooru 标签为主（逗号分隔），写动作/姿势、表情、构图/视角。
-2. 没有特别符合的标准 tag 时，用英文自然语言句子接在标签后面描述，不要编造不标准的 tag（不标准 tag 会干扰模型理解）。
-3. `appearance` 使用逗号分隔 Danbooru 标签，仅单角色使用；多角色时必须留空。
-4. 多角色时 `tags` 中禁止任何角色外貌信息，外貌用自然语言逐角色分别描述。
-5. `quality_meta_year_safe` 必须明确安全等级 `safe/sensitive/nsfw/explicit`。
-6. `artist` 必须以 `@` 开头，无明确需求时空着。
-7. 默认非写实。
+1. `tags` 固定使用英文自然语言完整句子，写动作/姿势、表情、构图/视角、场景与氛围，至少 1-2 句。
+2. `appearance` 使用逗号分隔的标准 Danbooru 标签，只填有明确指代的标准 tag，不要编造；仅单角色使用，多角色时必须留空。
+3. 多角色时 `tags` 中禁止任何角色外貌信息，外貌用自然语言逐角色分别描述。
+4. `quality_meta_year_safe` 必须明确安全等级 `safe/sensitive/nsfw/explicit`。
+5. `artist` 必须以 `@` 开头，无明确需求时空着。
+6. 默认非写实。
 
 ## 参数
 
@@ -17,10 +16,10 @@
 
 ## tags 写法
 
-标签在前、自然语言在后。标签覆盖动作/姿势、表情、构图/视角；没有标准 tag 的内容（氛围、光影、复杂互动）用自然语言句子补充，至少 1-2 句。
+英文自然语言完整句子，覆盖动作/姿势、表情、构图/视角、场景、氛围与光影，至少 1-2 句并写足细节。末尾固定加 `no text, no logo, no ui` 后缀（nsfw/explicit 分级再加 `no mosaic, uncensored`）。
 
 **示例:**
-> sitting, on desk, looking at viewer, smile, upper body, classroom, window, sunlight. Soft warm sunlight streams through the window, creating a cozy atmosphere.
+> A girl sits on a classroom desk, smiling at the viewer, shown from the waist up. Soft warm sunlight streams through the window, creating a cozy atmosphere. no text, no logo, no ui
 
 ## 自然语言技巧
 
@@ -32,8 +31,8 @@
 ## 多角色
 
 - `appearance` 必须留空
-- `tags` 只写共性姿势/构图标签，禁止任何角色外貌标签（发色、瞳色、发型、服装、饰品）
-- 外貌在 tags 的自然语言部分逐角色分别描述："The girl with crimson hair..."
+- `tags` 的自然语言只写共性姿势/构图，禁止任何角色外貌信息（发色、瞳色、发型、服装、饰品）
+- 外貌在 tags 的自然语言中逐角色分别描述："The girl with crimson hair..."
 - 用共处式描述，不用位置分割词（"On the left... On the right..."）
 - `character` 多人名逗号分隔
 

@@ -133,8 +133,11 @@ MCP Server 返回：
 | `turbo_v1` | Turbo 1.0：独立完整 UNET 快速生成 |
 | `aesthetic_v1` | Aesthetic 1.0：高质量微调完整 UNET |
 | `kira` | Kira (Kirazuri Anima v4)：Anima 微调 UNET（cfg 4-5，steps 30-50，er_sde） |
-| `kira_turbo` | Kira Turbo：Kira + 8-step LoRA（cfg=1，steps=8，默认 1536²） |
+| `kira_turbo` | Kira Turbo：Kira + 8-step LoRA（cfg=1，steps=8，默认 1024×1024） |
 | `ultrareal` | UltraReal (UltraReal_FineTune_Anima_base1_v3)：真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式） |
+| `nova` | Nova (novaAnimeAM v4.0)：完整 UNET（cfg 4-6，steps 20-30，Euler a + normal），score_N 质量前缀 |
+| `miao` | Miao (MiaomiaoHarem Anima 1.5)：完整 UNET（cfg 4-5，steps 30），score_N 质量前缀 |
+| `miao_turbo` | Miao Turbo (MiaomiaoHarem Anima 8-step)：快速 UNET（cfg=1，steps 8-30 推荐 12） |
 
 - `GET /anima/schema?workflow=turbo_v1` — 返回对应工作流的 Tool Schema
 - `GET /anima/knowledge?workflow=turbo_v1` — 返回对应工作流的专家知识
@@ -384,9 +387,9 @@ Aesthetic v1.0 是完整 UNET 模型，在高质量图像上微调。简化字�
 
 ```json
 {
-  "new_models_expert": "...",
+  "simple_expert": "...",
   "artist_list": "...",
-  "new_models_examples": "..."
+  "simple_examples": "..."
 }
 ```
 
@@ -398,7 +401,7 @@ Kira (Kirazuri Anima v4) 是 Anima 的微调模型，通过主 API 的 `workflow
 
 | workflow | 说明 |
 |----------|------|
-| `kira` | 完整 UNET，cfg 4-5（默认 4.5），steps 30-50（默认 40），采样器固定 `er_sde` |
+| `kira` | 完整 UNET，cfg 4-5（默认 4.5），steps 30-50（默认 35），采样器固定 `er_sde` |
 | `kira_turbo` | Kira + 8-step LoRA，固定 cfg=1 / steps=8（payload 传入无效），主用 `res_2s`+`bong_tangent`（需 RES4LYF 节点），不可用自动回落 `res_multistep`+`simple`，默认 1024×1024 |
 
 ```bash
@@ -433,7 +436,7 @@ UltraReal (UltraReal_FineTune_Anima_base1_v3) 是 Anima base1.0 的真实系微�
 ```bash
 curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=ultrareal" \
   -H "Content-Type: application/json" \
-  -d '{"tags":"@smartphone_photo @amateur_photo @candid_photo @available_light","nltags":"A close-up selfie of a young woman cosplaying Shiroko from Blue Archive, with short silver-grey hair, grey wolf ears and a black scarf.","quality_meta_year_safe":"@sfw @2025 score_8"}'
+  -d '{"tags":"@smartphone_photo @amateur_photo @candid_photo @available_light","nltags":"A close-up selfie of Shiroko from Blue Archive. She has short silver-grey hair, grey wolf ears and a black scarf.","quality_meta_year_safe":"@sfw @2025 score_8"}'
 ```
 
 字段与其他工作流不同（必填 `tags` / `nltags` / `quality_meta_year_safe`）：
@@ -453,11 +456,14 @@ curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=ultrareal" \
 | Turbo 0.2 | `/anima/generate_turbo` | 固定 1 | 固定 10 | 无 | 简化（无 style/tags/environment/neg） |
 | Turbo 1.0 | `/anima/generate_turbo_v1` | 0.7-1, 默认 1 | 8-12, 默认 10 | 有 | 简化（无 style/tags/environment） |
 | Aesthetic 1.0 | `/anima/generate_aesthetic_v1` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 简化（无 style/tags/environment） |
-| Kira | `/anima/generate?workflow=kira` | 4-5, 默认 4.5 | 30-50, 默认 40 | 有 | 简化（无 style/tags/environment） |
+| Kira | `/anima/generate?workflow=kira` | 4-5, 默认 4.5 | 30-50, 默认 35 | 有 | 简化（无 style/tags/environment） |
 | Kira Turbo | `/anima/generate?workflow=kira_turbo` | 固定 1 | 固定 8 | 有 | 简化，默认 1024×1024 |
 | UltraReal | `/anima/generate?workflow=ultrareal` | 默认 4 | 默认 28 | 有 | 三段式（tags 前缀 + nltags 自然语言 + 后缀） |
+| Nova | `/anima/generate?workflow=nova` | 4-6, 默认 5 | 20-30, 默认 25 | 有 | 简化（无 style/tags/environment），score_N 质量前缀 |
+| Miao | `/anima/generate?workflow=miao` | 4-5, 默认 4.5 | 默认 30 | 有 | 简化（无 style/tags/environment），score_N 质量前缀 |
+| Miao Turbo | `/anima/generate?workflow=miao_turbo` | 建议固定 1 | 8-30, 推荐 12 | 有（cfg=1 时不生效） | 简化（无 style/tags/environment），score_N 质量前缀 |
 
-> 所有模型的 `tags` 均以标准 Danbooru 标签（逗号分隔）为主；没有特别符合的标准 tag 时用自然语言补充描述，不要编造不标准 tag。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分（base 为 `nltags`，其余为 `tags` 的自然语言句子）逐角色分别描述。Turbo 1.0 / Aesthetic 1.0 的 `quality_meta_year_safe` 格式为 `masterpiece, best quality, <rating>`。
+> 简化字段工作流（turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / nova / miao / miao_turbo）的 `tags` 为英文自然语言完整句子；base 的自然语言在 `nltags`，ultrareal 为三段式。`appearance` 等标签字段只填有明确指代的标准 Danbooru tag，不要编造。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分逐角色分别描述。
 
 ---
 

@@ -1,13 +1,13 @@
 {
-  "name": "generate_anima_kira",
-  "description": "Kira (Kirazuri Anima v4) 生成接口。使用简化字段生成二次元插画。质量标签可用 very aesthetic / aesthetic 引导模型自带审美；tags 使用英文自然语言完整句子（本模型为标签与自然语言混合训练，短提示词/纯标签容易概念串扰，需写足细节）。",
+  "name": "generate_anima",
+  "description": "生成接口。使用简化字段生成二次元插画；各工作流的提示词规则、质量前缀与推荐参数见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {
       "quality_meta_year_safe": {
         "type": "string",
-        "description": "质量/美学标签与安全等级。格式：'masterpiece, best quality, very aesthetic, <safe/sensitive/nsfw/explicit>'。very aesthetic / aesthetic 是本模型特有的美学引导标签，可按需选用。安全等级必须明确。",
-        "default": "masterpiece, best quality, very aesthetic, safe"
+        "description": "质量标签与安全等级，安全等级必须明确（safe/sensitive/nsfw/explicit）。具体质量前缀格式见 knowledge。",
+        "default": "masterpiece, best quality, safe"
       },
       "count": {
         "type": "string",
@@ -26,7 +26,7 @@
       },
       "appearance": {
         "type": "string",
-        "description": "角色外观标签（逗号分隔的Danbooru标签）：发型发色、眼睛、服装、饰品等。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
+        "description": "角色外观标签（逗号分隔的标准 Danbooru 标签）：发型发色、眼睛、服装、饰品等，只填有明确指代的标准 tag，不要编造。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
         "default": ""
       },
       "artist": {
@@ -36,22 +36,20 @@
       },
       "tags": {
         "type": "string",
-        "description": "通用标签：使用英文自然语言完整句子描述场景、动作、表情、构图、氛围与光影，至少 2-3 句并写足细节（本模型为标签与自然语言混合训练，短提示词容易概念串扰）。多角色时禁止写任何角色外貌信息，外貌在自然语言中逐角色分别描述。"
+        "description": "通用标签：英文自然语言完整句子，描述场景、动作、服装、表情、构图与氛围。多角色时禁止写任何角色外貌信息，外貌用自然语言逐角色分别描述。"
       },
       "neg": {
         "type": "string",
-        "description": "负面提示词。safe/sensitive 时追加 'nsfw, explicit'；nsfw/explicit 时追加 'safe, sensitive, censored, mosaic'。同时包含 'worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo'。",
+        "description": "负面提示词。留空时自动使用该工作流的默认负面，并按安全等级追加对立约束。",
         "default": ""
       },
       "cfg": {
         "type": "number",
-        "description": "CFG 引导强度，推荐 4-5。",
-        "default": 4.5
+        "description": "CFG 引导强度。缺省使用该工作流的官方推荐值。"
       },
       "steps": {
         "type": "integer",
-        "description": "采样步数，推荐 30-50，默认 40。",
-        "default": 40
+        "description": "采样步数。缺省使用该工作流的官方推荐值。"
       },
       "aspect_ratio": {
         "type": "string",
@@ -87,8 +85,8 @@
       },
       "filename_prefix": {
         "type": "string",
-        "description": "输出文件名前缀。",
-        "default": "AnimaTool_kira_"
+        "description": "输出文件名前缀。缺省使用该工作流的默认前缀。",
+        "default": ""
       }
     },
     "required": [

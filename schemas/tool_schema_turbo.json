@@ -26,7 +26,7 @@
       },
       "appearance": {
         "type": "string",
-        "description": "角色外观标签（逗号分隔的Danbooru标签）：发型发色、眼睛、服装、饰品等。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
+        "description": "角色外观标签（逗号分隔的标准 Danbooru 标签）：发型发色、眼睛、服装、饰品等，只填有明确指代的标准 tag，不要编造。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
         "default": ""
       },
       "artist": {
@@ -36,7 +36,7 @@
       },
       "tags": {
         "type": "string",
-        "description": "通用标签：以标准 Danbooru 标签（逗号分隔）为主，描述动作、表情、构图、服装；没有特别符合的标准 tag 时用英文自然语言句子补充，不要编造不标准 tag（会干扰模型理解）。多角色时禁止写任何角色外貌信息，外貌用自然语言逐角色分别描述。末尾必须加上 'no text, no logo, no ui'；nsfw/explicit 分级额外追加 ', no mosaic, uncensored'。"
+        "description": "通用标签：英文自然语言完整句子，描述动作、表情、构图、服装与场景氛围。多角色时禁止写任何角色外貌信息，外貌用自然语言逐角色分别描述。末尾必须加上 'no text, no logo, no ui'；nsfw/explicit 分级额外追加 ', no mosaic, uncensored'。"
       },
       "cfg": {
         "type": "number",

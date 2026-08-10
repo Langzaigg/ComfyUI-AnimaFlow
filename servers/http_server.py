@@ -28,7 +28,7 @@ from executor import AnimaExecutor, AnimaToolConfig
 class GenerateRequest(BaseModel):
     # 允许任意字段（由 tool schema 约束；服务端只做最小校验）
     payload: Dict[str, Any] = Field(default_factory=dict)
-    # 工作流选择：base / turbo / turbo_v1 / aesthetic_v1，缺省 base
+    # 工作流选择：base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / ultrareal / nova / miao / miao_turbo，缺省 base
     workflow: Optional[str] = Field(default=None)
 
 
@@ -46,11 +46,11 @@ def _read_text(path: Path) -> str:
 _SCHEMA_DIR = _PARENT / "schemas"
 _KNOWLEDGE_DIR = _PARENT / "knowledge"
 
-# Turbo v1.0 / Aesthetic v1.0 共享同一套专家知识
-_NEW_MODELS_KNOWLEDGE = {
-    "new_models_expert": "new_models_expert.md",
+# turbo_v1 / aesthetic_v1 共享同一套专家知识（质量前缀、默认负面、字段策略完全一致）
+_SIMPLE_KNOWLEDGE = {
+    "simple_expert": "simple_expert.md",
     "artist_list": "artist_list.md",
-    "new_models_examples": "new_models_examples.md",
+    "simple_examples": "simple_examples.md",
 }
 
 # kira / kira_turbo 共享同一套专家知识
@@ -83,17 +83,17 @@ WORKFLOWS = {
     },
     "turbo_v1": {
         "description": "Turbo 1.0：独立完整 UNET 快速生成（cfg 0.7-1, steps 8-12）",
-        "schema": "tool_schema_turbo_v1.json",
-        "knowledge": _NEW_MODELS_KNOWLEDGE,
+        "schema": "tool_schema_simple.json",
+        "knowledge": _SIMPLE_KNOWLEDGE,
     },
     "aesthetic_v1": {
         "description": "Aesthetic 1.0：高质量微调完整 UNET（cfg 3-8, steps 20-60）",
-        "schema": "tool_schema_aesthetic_v1.json",
-        "knowledge": _NEW_MODELS_KNOWLEDGE,
+        "schema": "tool_schema_simple.json",
+        "knowledge": _SIMPLE_KNOWLEDGE,
     },
     "kira": {
         "description": "Kira (Kirazuri Anima v4)：Anima 微调完整 UNET（cfg 4-5, steps 30-50, er_sde）",
-        "schema": "tool_schema_kira.json",
+        "schema": "tool_schema_simple.json",
         "knowledge": _KIRA_KNOWLEDGE,
     },
     "kira_turbo": {
@@ -107,6 +107,30 @@ WORKFLOWS = {
         "knowledge": {
             "ultrareal_expert": "ultrareal_expert.md",
             "ultrareal_examples": "ultrareal_examples.md",
+        },
+    },
+    "nova": {
+        "description": "Nova (novaAnimeAM v4.0)：完整 UNET（cfg 4-6, steps 20-30, Euler a + normal），score_N 质量前缀",
+        "schema": "tool_schema_simple.json",
+        "knowledge": {
+            "nova_expert": "nova_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "miao": {
+        "description": "Miao (MiaomiaoHarem Anima 1.5)：完整 UNET（cfg 4-5, steps 30），score_N 质量前缀",
+        "schema": "tool_schema_simple.json",
+        "knowledge": {
+            "miao_expert": "miao_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "miao_turbo": {
+        "description": "Miao Turbo (MiaomiaoHarem Anima 8-step)：快速 UNET（cfg=1, steps 8-30 推荐 12）",
+        "schema": "tool_schema_simple.json",
+        "knowledge": {
+            "miao_turbo_expert": "miao_turbo_expert.md",
+            "artist_list": "artist_list.md",
         },
     },
 }
@@ -142,6 +166,12 @@ def create_app() -> FastAPI:
             return executor.generate_kira(payload, turbo=True)
         if workflow == "ultrareal":
             return executor.generate_ultrareal(payload)
+        if workflow == "nova":
+            return executor.generate_v2(payload, "nova")
+        if workflow == "miao":
+            return executor.generate_v2(payload, "miao")
+        if workflow == "miao_turbo":
+            return executor.generate_v2(payload, "miao_turbo")
         return executor.generate(payload)
 
     @app.get("/health")

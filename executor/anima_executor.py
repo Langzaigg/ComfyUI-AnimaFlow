@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, NOVA_UNET_NAME, NOVA_SAMPLER, NOVA_STEPS, NOVA_CFG, MIAO_UNET_NAME, MIAO_SAMPLER, MIAO_STEPS, MIAO_CFG, MIAO_TURBO_UNET_NAME, MIAO_TURBO_SAMPLER, MIAO_TURBO_STEPS, MIAO_TURBO_CFG
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -162,6 +162,36 @@ def build_new_models_negative_text(prompt_json: Dict[str, Any]) -> str:
     return f"{base}, nsfw, explicit"
 
 
+def build_nova_negative_text(prompt_json: Dict[str, Any]) -> str:
+    """
+    Nova (novaAnimeAM v4.0) 默认负面提示词（官方推荐）。
+    根据 quality_meta_year_safe 中的安全等级追加对立约束。
+    """
+    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
+    explicit = "nsfw" in q or "explicit" in q
+    base = "worst quality, low quality, early, old, score_1, score_2, score_3, cartoon, graphic, painting, crayon, graphite, abstract, glitch, deformed, mutated, ugly, disfigured, long body, bad anatomy, bad hands, missing fingers, extra fingers, extra digits, fewer digits, cropped, very displeasing, artist name, blurry, jpeg artifacts, lowres, censor"
+    if explicit:
+        return f"{base}, safe, sensitive, mosaic"
+    return f"{base}, nsfw, explicit"
+
+
+def build_miao_negative_text(prompt_json: Dict[str, Any], turbo: bool = False) -> str:
+    """
+    Miao (MiaomiaoHarem Anima) 默认负面提示词（官方推荐）。
+    turbo=True（miao_turbo）时去掉 shiny skin（官方 turbo 版负面不含此项）。
+    根据 quality_meta_year_safe 中的安全等级追加对立约束。
+    注意：miao_turbo 官方建议 cfg 固定 1.0，此时负面提示词实际不生效。
+    """
+    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
+    explicit = "nsfw" in q or "explicit" in q
+    base = "worst quality, low quality, score_1, score_2, score_3, artist name"
+    if not turbo:
+        base += ", shiny skin"
+    if explicit:
+        return f"{base}, safe, sensitive, censored, mosaic"
+    return f"{base}, nsfw, explicit"
+
+
 def build_anima_positive_text(prompt_json: Dict[str, Any]) -> str:
     """
     按 Anima 官方推荐顺序拼接正面提示词。
@@ -184,6 +214,37 @@ def build_anima_positive_text(prompt_json: Dict[str, Any]) -> str:
         prompt_json.get("environment", ""),
         prompt_json.get("nltags", ""),
     )
+
+
+# v2 统一工作流的模型预设：默认 UNET、采样参数（默认值与取值范围均为各模型官方推荐）、
+# 默认采样组合、文件名前缀。steps_range / cfg_range 为 None 表示不限制。
+_V2_MODEL_PRESETS = {
+    "turbo1.0": {
+        "unet": TURBO10_UNET_NAME, "steps": 10, "cfg": 1.0,
+        "steps_range": (8, 12), "cfg_range": (0.7, 1.0),
+        "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_turbo_v1_",
+    },
+    "aesthetic1.0": {
+        "unet": AESTHETIC10_UNET_NAME, "steps": 35, "cfg": 4.0,
+        "steps_range": None, "cfg_range": None,
+        "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_aesthetic_",
+    },
+    "nova": {
+        "unet": NOVA_UNET_NAME, "steps": NOVA_STEPS, "cfg": NOVA_CFG,
+        "steps_range": (20, 30), "cfg_range": (4.0, 6.0),
+        "sampler": NOVA_SAMPLER[0], "scheduler": NOVA_SAMPLER[1], "prefix": "AnimaTool_nova_",
+    },
+    "miao": {
+        "unet": MIAO_UNET_NAME, "steps": MIAO_STEPS, "cfg": MIAO_CFG,
+        "steps_range": None, "cfg_range": (4.0, 5.0),
+        "sampler": MIAO_SAMPLER[0], "scheduler": MIAO_SAMPLER[1], "prefix": "AnimaTool_miao_",
+    },
+    "miao_turbo": {
+        "unet": MIAO_TURBO_UNET_NAME, "steps": MIAO_TURBO_STEPS, "cfg": MIAO_TURBO_CFG,
+        "steps_range": (8, 30), "cfg_range": None,
+        "sampler": MIAO_TURBO_SAMPLER[0], "scheduler": MIAO_TURBO_SAMPLER[1], "prefix": "AnimaTool_miao_turbo_",
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -633,21 +694,19 @@ class AnimaExecutor:
 
     def _inject_v2(self, prompt_json: Dict[str, Any], model: str) -> Dict[str, Any]:
         """
-        新模型 v1.0 统一工作流注入：turbo-v1.0 与 aesthetic-v1.0 共用同一模板。
-        两者都是完整 UNET，不依赖额外 LoRA，因此 LoRA strength 固定为 0。
+        新模型 v1.0 统一工作流注入：turbo-v1.0、aesthetic-v1.0 与 nova 共用同一模板。
+        三者都是完整 UNET，不依赖额外 LoRA，因此 LoRA strength 固定为 0。
 
-        model: "turbo1.0" 或 "aesthetic1.0"
+        model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo）
         """
-        if model not in ("turbo1.0", "aesthetic1.0"):
-            raise ValueError(f"不支持的 v2 model={model!r}，仅支持 turbo1.0 / aesthetic1.0")
+        preset = _V2_MODEL_PRESETS.get(model)
+        if preset is None:
+            raise ValueError(f"不支持的 v2 model={model!r}，可选：{sorted(_V2_MODEL_PRESETS)}")
 
         wf = deepcopy(self._workflow_template_unified)
 
         # 模型选择
-        if model == "turbo1.0":
-            unet_name = prompt_json.get("unet_name") or TURBO10_UNET_NAME
-        else:  # aesthetic1.0
-            unet_name = prompt_json.get("unet_name") or AESTHETIC10_UNET_NAME
+        unet_name = prompt_json.get("unet_name") or preset["unet"]
 
         clip_name = prompt_json.get("clip_name") or self.config.clip_name
         vae_name = prompt_json.get("vae_name") or self.config.vae_name
@@ -665,7 +724,14 @@ class AnimaExecutor:
             positive = build_turbo_positive_text(prompt_json)
         negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
         if not negative:
-            negative = build_new_models_negative_text(prompt_json)
+            if model == "nova":
+                negative = build_nova_negative_text(prompt_json)
+            elif model == "miao":
+                negative = build_miao_negative_text(prompt_json)
+            elif model == "miao_turbo":
+                negative = build_miao_negative_text(prompt_json, turbo=True)
+            else:
+                negative = build_new_models_negative_text(prompt_json)
 
         wf["11"]["inputs"]["text"] = positive
         wf["12"]["inputs"]["text"] = negative
@@ -700,28 +766,28 @@ class AnimaExecutor:
             seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
         wf["19"]["inputs"]["seed"] = int(seed)
 
-        # 采样参数：turbo1.0 沿用 turbo 快速参数；aesthetic1.0 沿用 base 参数
-        if model == "turbo1.0":
-            steps = int(prompt_json.get("steps") or 10)
-            steps = max(8, min(12, steps))
-            wf["19"]["inputs"]["steps"] = steps
-            cfg = float(prompt_json.get("cfg") or 1.0)
-            cfg = max(0.7, min(1.0, cfg))
-            wf["19"]["inputs"]["cfg"] = cfg
-        else:  # aesthetic1.0
-            wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or 35)
-            wf["19"]["inputs"]["cfg"] = float(prompt_json.get("cfg") or 4)
+        # 采样参数（默认值与取值范围见 _V2_MODEL_PRESETS，均为各模型官方推荐）
+        steps = int(prompt_json.get("steps") or preset["steps"])
+        if preset["steps_range"]:
+            lo, hi = preset["steps_range"]
+            steps = max(lo, min(hi, steps))
+        wf["19"]["inputs"]["steps"] = steps
+        cfg = float(prompt_json.get("cfg") or preset["cfg"])
+        if preset["cfg_range"]:
+            lo, hi = preset["cfg_range"]
+            cfg = max(lo, min(hi, cfg))
+        wf["19"]["inputs"]["cfg"] = cfg
 
-        # 采样器：新模型默认使用 euler（老工作流 base/turbo0.2 用 er_sde）
-        wf["19"]["inputs"]["sampler_name"] = str(prompt_json.get("sampler_name") or "euler")
-        if prompt_json.get("scheduler"):
-            wf["19"]["inputs"]["scheduler"] = str(prompt_json["scheduler"])
+        # 采样器：默认各模型官方推荐组合（老工作流 base/turbo0.2 用 er_sde）
+        wf["19"]["inputs"]["sampler_name"] = str(prompt_json.get("sampler_name") or preset["sampler"])
+        scheduler = prompt_json.get("scheduler") or preset["scheduler"]
+        if scheduler:
+            wf["19"]["inputs"]["scheduler"] = str(scheduler)
         if prompt_json.get("denoise") is not None:
             wf["19"]["inputs"]["denoise"] = float(prompt_json["denoise"])
 
         # 文件名前缀
-        default_prefix = "AnimaTool_aesthetic_" if model == "aesthetic1.0" else "AnimaTool_turbo_v1_"
-        wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or default_prefix)
+        wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or preset["prefix"])
 
         return wf
 
@@ -802,7 +868,7 @@ class AnimaExecutor:
             # sa_solver_pece 16 步质量相当（慢 ~15%），但多人复杂场景 sa_solver_pece
             # 会生成文字 LOGO 和手部色块异常，er_sde 两场景均干净稳定，综合选 er_sde。
             # scheduler 用模板默认（simple）。
-            wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or 40)
+            wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or 35)
             wf["19"]["inputs"]["cfg"] = float(prompt_json.get("cfg") or 4.5)
             wf["19"]["inputs"]["sampler_name"] = "er_sde"
 
@@ -1537,7 +1603,7 @@ class AnimaExecutor:
         新模型 v1.0 统一生成入口。
 
         参数：
-        - model: "turbo1.0" 或 "aesthetic1.0"
+        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo）
         - 其余字段与 turbo 模式一致，使用自然语言 tags
         """
         prompt = self._inject_v2(prompt_json, model)

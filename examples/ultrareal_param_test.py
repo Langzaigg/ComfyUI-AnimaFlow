@@ -1,8 +1,8 @@
 """
 UltraReal (UltraReal_FineTune_Anima_base1_v3) 超参数对比测试。
 
-场景 A：碧蓝档案 白子(Shiroko) cosplay 手机自拍（固定 seed，遍历采样器/步数/CFG）
-场景 B：碧蓝档案 芹香(Serika) cosplay 胶片风（用最优组合验证指令遵循）
+场景 A：碧蓝档案 白子(Shiroko) 手机自拍（固定 seed，遍历采样器/步数/CFG）
+场景 B：碧蓝档案 芹香(Serika) 胶片风（用最优组合验证指令遵循）
 
 用法：
     python examples/ultrareal_param_test.py round1   # 采样器对比
@@ -24,13 +24,13 @@ from executor import AnimaExecutor, AnimaToolConfig
 
 SEED = 20250807
 
-# 场景 A：白子 cosplay 手机自拍（指令遵循检查点：狼耳/围巾/领带/自拍姿势/教室黑板/平静表情）
+# 场景 A：白子手机自拍（指令遵循检查点：狼耳/围巾/领带/自拍姿势/教室黑板/平静表情）
 SCENE_A = {
     "tags": "@smartphone_photo @amateur_photo @candid_photo @available_light",
     "nltags": (
-        "A medium close-up selfie of a young woman cosplaying Shiroko from Blue Archive. "
-        "She has short silver-grey hair, grey wolf ears, and wears a black scarf over the "
-        "blue-and-white Abydos school uniform with a blue necktie. "
+        "A medium close-up selfie of Shiroko from Blue Archive. "
+        "She has short silver-grey hair, grey wolf ears, and wears a black scarf over a "
+        "blue-and-white school uniform with a blue necktie. "
         "She holds the phone at arm's length with one hand and looks at the camera with a calm, expressionless face. "
         "The background is a sunlit classroom with wooden desks and a green chalkboard, slightly blurred."
     ),
@@ -40,13 +40,13 @@ SCENE_A = {
     "seed": SEED,
 }
 
-# 场景 B：芹香 cosplay 胶片风（指令遵循检查点：双马尾/红瞳/围裙/拉面店/站姿）
+# 场景 B：芹香胶片风（指令遵循检查点：双马尾/红瞳/围裙/拉面店/站姿）
 SCENE_B = {
     "tags": "@film_photo @amateur_photo @posed_photo @available_light",
     "nltags": (
-        "A full-body photo of a young woman cosplaying Serika from Blue Archive, standing in front of a small ramen shop. "
-        "She has long dark blue hair tied in twin-tails and red eyes, wearing a beige work apron over the "
-        "Abydos school uniform. She is holding a serving tray with both hands and smiling awkwardly at the camera. "
+        "A full-body photo of Serika from Blue Archive standing in front of a small ramen shop. "
+        "She has long dark blue hair tied in twin-tails and red eyes, wearing a beige work apron over a "
+        "blue-and-white school uniform. She is holding a serving tray with both hands and smiling awkwardly at the camera. "
         "Warm afternoon sunlight, a noren curtain and a wooden signboard visible behind her."
     ),
     "quality_meta_year_safe": "@sfw @2015 score_8",
@@ -59,10 +59,10 @@ SCENE_B = {
 SCENE_C = {
     "tags": "@smartphone_photo @amateur_photo @candid_photo @available_light",
     "nltags": (
-        "A candid photo of two young women cosplaying Shiroko and Serika from Blue Archive in a classroom after school. "
-        "The girl on the left cosplays Shiroko: short silver-grey hair, grey wolf ears, a black scarf over the "
-        "blue-and-white Abydos uniform with a blue necktie, a calm expression, holding up a smartphone to take a selfie of the two. "
-        "The girl on the right cosplays Serika: long dark blue twin-tails, red eyes, a beige cardigan over the same uniform, "
+        "A candid photo of Shiroko and Serika from Blue Archive in a classroom after school. "
+        "Shiroko, on the left, has short silver-grey hair, grey wolf ears, a black scarf over a "
+        "blue-and-white school uniform with a blue necktie, a calm expression, holding up a smartphone to take a selfie of the two. "
+        "Serika, on the right, has long dark blue twin-tails, red eyes, a beige cardigan over the same uniform, "
         "pouting with her arms crossed. "
         "Late afternoon sunlight comes through the windows, with wooden desks and a green chalkboard behind them."
     ),

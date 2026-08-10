@@ -1,10 +1,10 @@
-# ComfyUI-AnimaTool Wiki
+# AnimaFlow Wiki
 
-欢迎来到 ComfyUI-AnimaTool 的 Wiki！
+欢迎来到 AnimaFlow 的 Wiki！
 
 ## 简介
 
-ComfyUI-AnimaTool 是一个让 AI Agent（Cursor / Claude / Gemini / OpenAI）通过 MCP / HTTP API 直接调用 ComfyUI 生成二次元图片的工具。
+AnimaFlow（前身 ComfyUI-AnimaTool）是一个让 AI Agent（Cursor / Claude / Gemini / OpenAI）通过 MCP / HTTP API 直接调用 ComfyUI 生成二次元图片的工具，支持多模型、多工作流的统一 API。
 
 ### 主要特点
 
@@ -21,7 +21,8 @@ ComfyUI-AnimaTool 是一个让 AI Agent（Cursor / Claude / Gemini / OpenAI）�
 2. [MCP Server 配置](MCP-Setup)
 3. [提示词指南](Prompt-Guide)
 4. [API 参考](API-Reference)
-5. [常见问题](FAQ)
+5. [模型实测横评](Model-Comparison)
+6. [常见问题](FAQ)
 
 ## 使用的模型
 
@@ -34,6 +35,6 @@ ComfyUI-AnimaTool 是一个让 AI Agent（Cursor / Claude / Gemini / OpenAI）�
 
 ## 链接
 
-- [GitHub 仓库](https://github.com/Moeblack/ComfyUI-AnimaTool)
+- [GitHub 仓库](https://github.com/Langzaigg/ComfyUI-AnimaFlow)（前身 [ComfyUI-AnimaTool](https://github.com/Moeblack/ComfyUI-AnimaTool)）
 - [Anima 模型](https://huggingface.co/circlestone-labs/Anima)
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI)

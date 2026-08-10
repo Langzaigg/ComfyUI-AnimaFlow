@@ -1,6 +1,6 @@
 # AnimaFlow
 
-> 前身 ComfyUI-AnimaTool。现已扩展为多模型、多工作流的统一 Tool Use API（base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / ultrareal）。
+> 前身 ComfyUI-AnimaTool。现已扩展为多模型、多工作流的统一 Tool Use API（base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / ultrareal / nova / miao / miao_turbo）。
 
 > [!NOTE]
 > **今日更新**
@@ -247,7 +247,7 @@ pip install mcp
 
 启动 ComfyUI 后，以下路由自动注册：
 
-主 API 通过 `workflow` 参数（`base` / `turbo` / `turbo_v1` / `aesthetic_v1` / `kira` / `kira_turbo` / `ultrareal`，缺省 `base`）返回/使用各个不同工作流的信息：
+主 API 通过 `workflow` 参数（`base` / `turbo` / `turbo_v1` / `aesthetic_v1` / `kira` / `kira_turbo` / `ultrareal` / `nova` / `miao` / `miao_turbo`，缺省 `base`）返回/使用各个不同工作流的信息：
 
 | 路由 | 方法 | 说明 |
 |------|------|------|

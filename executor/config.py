@@ -67,6 +67,27 @@ ULTRAREAL_SAMPLER = ("er_sde", "simple")
 ULTRAREAL_STEPS = 28
 ULTRAREAL_CFG = 4.0
 
+# Nova (novaAnimeAM v4.0) 模型文件名
+# 官方推荐：Euler a + normal，steps 20-30，CFG 4-6
+NOVA_UNET_NAME = "novaAnimeAM_v40.safetensors"
+NOVA_SAMPLER = ("euler_ancestral", "normal")
+NOVA_STEPS = 25
+NOVA_CFG = 5.0
+
+# Miao (MiaomiaoHarem Anima 1.5) 模型文件名
+# 官方推荐：Euler/Euler a + normal，steps 30，CFG 4-5
+MIAO_UNET_NAME = "miaomiaoHarem_anima15.safetensors"
+MIAO_SAMPLER = ("euler", "normal")
+MIAO_STEPS = 30
+MIAO_CFG = 4.5
+
+# Miao Turbo (MiaomiaoHarem Anima 8-step) 模型文件名
+# 官方推荐：steps 8-30（推荐 12），CFG 强烈建议固定 1.0（cfg=1 时负面不生效）
+MIAO_TURBO_UNET_NAME = "miaomiaoHarem_anima8Step10.safetensors"
+MIAO_TURBO_SAMPLER = ("euler", "normal")
+MIAO_TURBO_STEPS = 12
+MIAO_TURBO_CFG = 1.0
+
 
 @dataclass
 class AnimaToolConfig:
