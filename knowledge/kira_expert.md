@@ -1,6 +1,6 @@
 # Kira (Kirazuri Anima v4) 提示词规范
 
-适用于 kira 与 kira-turbo 两个工作流。本模型使用 booru 标签、自然语言描述及两者混合训练，**tags 字段固定使用英文自然语言**。
+本模型使用 booru 标签、自然语言描述及两者混合训练，**tags 字段固定使用英文自然语言**。
 
 ## 标签顺序
 
@@ -15,7 +15,7 @@
 - `count`: `1girl` / `2girls` / `1boy` / `1other`
 - `appearance`: 逗号分隔 Danbooru 标签（发色、瞳色、服装）。仅单角色使用，多角色时必须留空。
 - `tags`: **英文自然语言完整句子**，描述场景、动作、表情、构图、氛围与光影，至少 2-3 句并写足细节。不要用逗号分隔的标签堆叠——短提示词/纯标签在本模型上会出现明显的概念串扰与不稳定（本模型是标签与自然语言混合训练的，自然语言细节能显著缓解）。
-- `neg`: `worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo` + 安全对立约束（正面 safe/sensitive → 负面加 nsfw, explicit；反之亦然）
+- `neg`: `worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo` + 安全对立约束（正面 safe/sensitive → 负面加 nsfw, explicit；反之亦然）。
 
 ## 美学与风格标签
 

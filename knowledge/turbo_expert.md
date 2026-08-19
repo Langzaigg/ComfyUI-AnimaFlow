@@ -38,7 +38,7 @@
 
 ## 负面提示词
 
-`worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo` + 安全对立约束。nsfw/explicit 时 tags 末尾加 `no mosaic, uncensored`。
+cfg=1 时负面不进采样、不生效，本工作流因此不设 `neg` 字段，完全走正向写法规避：`tags` 末尾固定 `no text, no logo, no ui` 后缀，nsfw/explicit 分级再保留无码提示词 `no mosaic, uncensored`。payload 手动传 `neg`/`negative` 只会在编码后被采样器忽略，不要填写。
 
 ## 模型限制
 

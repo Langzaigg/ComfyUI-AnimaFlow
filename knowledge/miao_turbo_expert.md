@@ -13,7 +13,7 @@
 | `artist` | `@` 开头，如 `@wlop`。无需求时空着。 |
 | `appearance` | 逗号分隔的标准 Danbooru 标签（发色、瞳色、服装），只填有明确指代的标准 tag，不要编造；没有合适 tag 的外貌细节写到 tags 的自然语言中。仅单角色使用，多角色必须留空。 |
 | `tags` | **英文自然语言完整句子**，写动作、表情、构图、场景、氛围与光影，至少 1-2 句并写足细节。多角色时禁止写角色外貌，外貌用自然语言逐角色分别描述。 |
-| `neg` | 留空即可，后端自动使用默认负面并按安全等级追加对立约束（正面 safe/sensitive → 负面加 `nsfw, explicit`，反之亦然）。注意 cfg=1 时负面提示词不生效。 |
+| `neg` | 不要填：cfg=1 时负面不进采样、不生效。不想要的元素用正向写法规避（不要提及，用正向描述替代）；唯一例外是 nsfw/explicit 分级时在 `tags` 末尾保留无码提示词 `no mosaic, uncensored`。 |
 | `aspect_ratio` | `16:9` `3:2` `1:1` `2:3` `9:16`，默认 `1:1` |
 
 默认负面：`worst quality, low quality, score_1, score_2, score_3, artist name`

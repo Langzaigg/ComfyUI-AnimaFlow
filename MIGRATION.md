@@ -1,6 +1,61 @@
 # 迁移参考：AnimaFlow 2026-08 变更
 
-本文档汇总近期一轮变更（主 API 统一化、提示词策略调整、Kira 工作流新增、项目重命名），供从旧版 AnimaTool 迁移时参考。
+本文档汇总两轮变更：2026-08-18 版本（Anima 2.9B、弃用标记与发现 API，见第 0 节）与此前一轮变更（主 API 统一化、提示词策略调整、Kira 工作流新增、项目重命名，见第 1-6 节），供从旧版 AnimaTool 迁移时参考。
+
+---
+
+## 0. 2026-08-18 版本：Anima 2.9B、弃用标记与工作流发现 API
+
+### 0.1 变更摘要
+
+| 项 | 内容 |
+|----|------|
+| 新增工作流 | `anima29`（Anima 2.9B v1.0：base 层扩展微调，cfg 3.5-5，steps 28-50 默认 30，euler + sgm_uniform）；`anima29_turbo`（加载 `Anima-2.9B_Turbo-BF16.safetensors` LoRA，cfg=1，steps 8-12 默认 8）；`anima29_rdbt`（rdbt v2.0 双 LoRA：base→distilled addon 串联，cfg=1，steps 默认 16——实测追平/反超 anima29 30 步，anima29 系性价比最优） |
+| 新增工作流（2026-08-19） | `aura` / `aura-speed`（AuraAnima 2.9B qpolaP101 Int8 W8a8 量化模型：质量/速度与 BF16 anima29 同档，显存约减半）。`aura` 为精度重视档（er_sde+beta，steps 默认 12），`aura-speed` 为速度重视档（euler+simple，steps 默认 10）；cfg 4.0-5.0 可调、默认 5.0，负面提示词正常生效。提示词规则与 anima29 系一致（year 2026 + 安全等级、无质量/分数词、无下划线），唯一新增：**风格质量标签三选一**——`photo real`（写实照片风，默认，用户无指定时用此）/ `anime color`（动画平涂风，配 artist 画师标签效果最佳）/ `real skin`（写实肤质风）。注意：写实路线（photo real / real skin）下**不要带画师 tag**（画师画风会接管画面丢失写实感）；版权角色还原场景建议 anime color（写实标签会真人化、丢失动画角色特征） |
+| 弃用工作流 | `turbo`(0.2) / `kira` / `kira_turbo` / `nova` / `miao` / `miao_turbo` 标记 `deprecated: true`——仍可调通，但不要在新流程中使用 |
+| int8 量化版移除 | `anima29_int8` / `anima29_int8_turbo` 预设已删除（XPU 实测更慢且加载不稳定）；确需量化版时在 `anima29` 工作流下用 payload `unet_name` 手动覆盖 |
+| cfg=1 负面规范 | 所有 turbo 工作流（cfg=1）：**不要写负面提示词**，不想要的元素用正向写法规避（不要提及，用正向描述替代）；仅 nsfw/explicit 分级时在 `tags` 末尾保留无码提示词 `no mosaic, uncensored` |
+| 实验性参数 | `neg_scale` / `nag_scale` / `anima_nag_scale`（cfg=1 强制负面生效的三种互斥引导）：实测对场景级概念全部无效、仅个别简单属性部分生效，默认关闭，仅保留供后续模型复测 |
+| 部署相关 | 启动脚本精简为 `run_intel_gpu.bat`（去掉了 --highvram 与自动重启逻辑），新增 `--reserve-vram 1` 为系统预留 1GB 显存；`ComfyUI-Anima-NAG` 插件仅实验性参数需要，可不装 |
+
+### 0.2 工作流发现 API
+
+`GET /anima/workflows`（ComfyUI 插件路由）与 `GET /workflows`（独立 FastAPI 服务）返回**当前全部工作流及其元信息**：
+
+```json
+{
+  "default": "base",
+  "workflows": {
+    "anima29_turbo": {
+      "description": "Anima 2.9B Turbo：Anima 2.9B + Turbo-BF16 LoRA 快速生成（cfg=1, steps 8-12 默认 8）",
+      "deprecated": false,
+      "endpoints": {
+        "generate": "POST /anima/generate（body 带 \"workflow\": \"anima29_turbo\"）",
+        "schema": "GET /anima/schema?workflow=anima29_turbo",
+        "knowledge": "GET /anima/knowledge?workflow=anima29_turbo"
+      }
+    },
+    "turbo": {
+      "description": "Turbo 0.2（Legacy）：base UNET + turbo LoRA 快速生成（cfg=1, steps=10）",
+      "deprecated": true,
+      "endpoints": { "generate": "...", "schema": "...", "knowledge": "..." }
+    }
+  }
+}
+```
+
+### 0.3 下游服务免适配接入约定
+
+下游服务**不要硬编码工作流清单、参数字段或提示词规则**，按以下约定接入即可对工作流的增/删/改免疫：
+
+1. **会话开始（或缓存到期）时拉一次 `/workflows`**，以返回的 `workflows` 键集为可选工作流全集，`default` 为缺省工作流；每个条目的一句话 `description` 可直接展示给用户或注入 LLM 上下文做选型依据。
+2. **过滤 `deprecated: true`**：默认不向终端用户提供弃用工作流（或仅作 legacy 标识展示），新流程一律不绑定它们。
+3. **参数校验/表单生成走 `GET /schema?workflow=X`**：字段集、默认值、取值范围以各工作流自己的 schema 为准——它们确实因模型而异（如 `kira_turbo` 不暴露 steps/cfg，`anima29_turbo` 多出实验性引导参数）。schema 各字段的 `description` 本身就是面向调用方/LLM 的最新填写规范（含 cfg=1 负面策略），应直接使用而不是另写模板。
+4. **提示词规则走 `GET /knowledge?workflow=X`**：把返回的专家知识（字段写法、质量前缀、模型限制、示例）整体注入生成侧上下文，不要把各模型的提示词规则写死在下游代码里。
+5. **生成统一调 `POST /generate`**，body 顶层带 `"workflow": "X"`（ComfyUI 路由为 `/anima/generate`）。不要再调用各工作流的旧独立端点（`/anima/generate_turbo` 等）——它们仅为兼容保留，**新增工作流不会有对应的独立端点**。
+6. **错误自愈**：不传 `workflow` 时服务端使用 `default`；传了未知值会返回 400 并在错误信息里列出当前可选值，下游捕获后可重新拉取 `/workflows` 自愈。
+
+按以上约定，服务端新增工作流（如未来的 anima30）、删除弃用工作流、调整默认参数或提示词规范时，下游服务零改动。
 
 ---
 

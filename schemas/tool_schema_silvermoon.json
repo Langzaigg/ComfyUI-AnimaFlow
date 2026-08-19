@@ -1,0 +1,105 @@
+{
+  "name": "generate_anima_silvermoon",
+  "description": "Silvermoon (silvermoonmixAnima_v23) 生成接口。Euler a + normal，CFG 4-5，steps 20-30。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "quality_meta_year_safe": {
+        "type": "string",
+        "description": "质量/元数据/年份/安全标签。必须明确 safe/sensitive/nsfw/explicit 之一。示例：'masterpiece, best quality, highres, newest, year 2025, safe'",
+        "default": "masterpiece, best quality, highres, newest, year 2025, safe"
+      },
+      "count": {
+        "type": "string",
+        "description": "人数标签，如 '1girl' / '2girls' / '1boy' / '1other'。",
+        "default": "1girl"
+      },
+      "character": {
+        "type": "string",
+        "description": "角色名（可含括号作品信息），如 'hatsune miku' 或 'yunli (honkai star rail)'。",
+        "default": ""
+      },
+      "series": {
+        "type": "string",
+        "description": "作品/系列名，如 'vocaloid' / 'honkai star rail'。",
+        "default": ""
+      },
+      "appearance": {
+        "type": "string",
+        "description": "角色外观标签（逗号分隔的标准 Danbooru 标签）：发型发色、眼睛、服装、饰品等，只填有明确指代的标准 tag，不要编造。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
+        "default": ""
+      },
+      "artist": {
+        "type": "string",
+        "description": "画师标签，必须以 @ 开头。如 '@makihitsuji'。无明确需求时留空。",
+        "default": ""
+      },
+      "tags": {
+        "type": "string",
+        "description": "通用标签：英文自然语言完整句子，描述动作、表情、构图、服装与场景氛围。多角色时禁止写任何角色外貌信息，外貌用自然语言逐角色分别描述。"
+      },
+      "neg": {
+        "type": "string",
+        "description": "负面提示词。留空时自动使用默认负面 'text, letters, sign, logo, watermark, signature, ui, interface'；nsfw/explicit 分级时自动追加 'mosaic, censored'。",
+        "default": ""
+      },
+      "cfg": {
+        "type": "number",
+        "description": "CFG 引导强度。官方推荐 4-5。",
+        "default": 4.5,
+        "minimum": 4,
+        "maximum": 5
+      },
+      "steps": {
+        "type": "integer",
+        "description": "采样步数。20-30。",
+        "default": 20,
+        "minimum": 20,
+        "maximum": 30
+      },
+      "aspect_ratio": {
+        "type": "string",
+        "description": "图片比例。默认 1:1。",
+        "enum": ["16:9", "3:2", "1:1", "2:3", "9:16"],
+        "default": "1:1"
+      },
+      "width": {
+        "type": "integer",
+        "description": "宽度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "height": {
+        "type": "integer",
+        "description": "高度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "批量生成数量。",
+        "default": 1,
+        "minimum": 1
+      },
+      "seed": {
+        "type": "integer",
+        "description": "随机种子。缺省则随机。",
+        "minimum": 0
+      },
+      "positive": {
+        "type": "string",
+        "description": "可选：直接提供最终正面提示词（覆盖结构化拼接）。通常不需要。",
+        "default": ""
+      },
+      "filename_prefix": {
+        "type": "string",
+        "description": "输出文件名前缀。",
+        "default": "AnimaTool_silvermoon_"
+      }
+    },
+    "required": [
+      "quality_meta_year_safe",
+      "count",
+      "tags"
+    ],
+    "additionalProperties": false
+  }
+}

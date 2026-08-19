@@ -28,7 +28,7 @@ from executor import AnimaExecutor, AnimaToolConfig
 class GenerateRequest(BaseModel):
     # 允许任意字段（由 tool schema 约束；服务端只做最小校验）
     payload: Dict[str, Any] = Field(default_factory=dict)
-    # 工作流选择：base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / ultrareal / nova / miao / miao_turbo，缺省 base
+    # 工作流选择：base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / ultrareal / nova / miao / miao_turbo / silvermoon / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed，缺省 base
     workflow: Optional[str] = Field(default=None)
 
 
@@ -46,16 +46,30 @@ def _read_text(path: Path) -> str:
 _SCHEMA_DIR = _PARENT / "schemas"
 _KNOWLEDGE_DIR = _PARENT / "knowledge"
 
-# turbo_v1 / aesthetic_v1 共享同一套专家知识（质量前缀、默认负面、字段策略完全一致）
+# aesthetic_v1 的专家知识
 _SIMPLE_KNOWLEDGE = {
     "simple_expert": "simple_expert.md",
     "artist_list": "artist_list.md",
     "simple_examples": "simple_examples.md",
 }
 
-# kira / kira_turbo 共享同一套专家知识
+# turbo_v1 的专家知识（cfg=1：负面不生效，示例不含 neg）
+_TURBO_V1_KNOWLEDGE = {
+    "turbo_v1_expert": "turbo_v1_expert.md",
+    "artist_list": "artist_list.md",
+    "turbo_v1_examples": "turbo_v1_examples.md",
+}
+
+# kira 的专家知识
 _KIRA_KNOWLEDGE = {
     "kira_expert": "kira_expert.md",
+    "artist_list": "artist_list.md",
+    "kira_examples": "kira_examples.md",
+}
+
+# kira_turbo 的专家知识（cfg=1：负面不生效；示例与 kira 共用）
+_KIRA_TURBO_KNOWLEDGE = {
+    "kira_turbo_expert": "kira_turbo_expert.md",
     "artist_list": "artist_list.md",
     "kira_examples": "kira_examples.md",
 }
@@ -74,6 +88,7 @@ WORKFLOWS = {
     },
     "turbo": {
         "description": "Turbo 0.2（Legacy）：base UNET + turbo LoRA 快速生成（cfg=1, steps=10）",
+        "deprecated": True,
         "schema": "tool_schema_turbo.json",
         "knowledge": {
             "turbo_expert": "turbo_expert.md",
@@ -83,8 +98,8 @@ WORKFLOWS = {
     },
     "turbo_v1": {
         "description": "Turbo 1.0：独立完整 UNET 快速生成（cfg 0.7-1, steps 8-12）",
-        "schema": "tool_schema_simple.json",
-        "knowledge": _SIMPLE_KNOWLEDGE,
+        "schema": "tool_schema_simple_turbo.json",
+        "knowledge": _TURBO_V1_KNOWLEDGE,
     },
     "aesthetic_v1": {
         "description": "Aesthetic 1.0：高质量微调完整 UNET（cfg 3-8, steps 20-60）",
@@ -93,13 +108,15 @@ WORKFLOWS = {
     },
     "kira": {
         "description": "Kira (Kirazuri Anima v4)：Anima 微调完整 UNET（cfg 4-5, steps 30-50, er_sde）",
+        "deprecated": True,
         "schema": "tool_schema_simple.json",
         "knowledge": _KIRA_KNOWLEDGE,
     },
     "kira_turbo": {
         "description": "Kira Turbo：Kira + 8-step LoRA 快速生成（cfg=1, steps=8, 默认 1024x1024）",
+        "deprecated": True,
         "schema": "tool_schema_kira_turbo.json",
-        "knowledge": _KIRA_KNOWLEDGE,
+        "knowledge": _KIRA_TURBO_KNOWLEDGE,
     },
     "ultrareal": {
         "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3)：Anima base1.0 真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式）",
@@ -111,6 +128,7 @@ WORKFLOWS = {
     },
     "nova": {
         "description": "Nova (novaAnimeAM v4.0)：完整 UNET（cfg 4-6, steps 20-30, Euler a + normal），score_N 质量前缀",
+        "deprecated": True,
         "schema": "tool_schema_simple.json",
         "knowledge": {
             "nova_expert": "nova_expert.md",
@@ -119,6 +137,7 @@ WORKFLOWS = {
     },
     "miao": {
         "description": "Miao (MiaomiaoHarem Anima 1.5)：完整 UNET（cfg 4-5, steps 30），score_N 质量前缀",
+        "deprecated": True,
         "schema": "tool_schema_simple.json",
         "knowledge": {
             "miao_expert": "miao_expert.md",
@@ -127,9 +146,60 @@ WORKFLOWS = {
     },
     "miao_turbo": {
         "description": "Miao Turbo (MiaomiaoHarem Anima 8-step)：快速 UNET（cfg=1, steps 8-30 推荐 12）",
-        "schema": "tool_schema_simple.json",
+        "deprecated": True,
+        "schema": "tool_schema_simple_turbo.json",
         "knowledge": {
             "miao_turbo_expert": "miao_turbo_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "silvermoon": {
+        "description": "Silvermoon (silvermoonmixAnima_v23)：完整 UNET（cfg 4-5, steps 20-30 默认 20, Euler a + normal）",
+        "schema": "tool_schema_silvermoon.json",
+        "knowledge": {
+            "silvermoon_expert": "silvermoon_expert.md",
+            "silvermoon_examples": "silvermoon_examples.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    # Anima 2.9B 家族：anima29 / anima29_turbo / anima29_rdbt 各有独立 schema 与 knowledge 文件
+    "anima29": {
+        "description": "Anima 2.9B v1.0：base 层扩展微调完整 UNET（cfg 3.5-5, steps 28-50 默认 30, Euler + sgm_uniform）",
+        "schema": "tool_schema_anima29.json",
+        "knowledge": {
+            "anima29_expert": "anima29_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "anima29_turbo": {
+        "description": "Anima 2.9B Turbo：Anima 2.9B + Turbo-BF16 LoRA 快速生成（cfg=1, steps 8-12 默认 8）",
+        "schema": "tool_schema_anima29_turbo.json",
+        "knowledge": {
+            "anima29_turbo_expert": "anima29_turbo_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "anima29_rdbt": {
+        "description": "Anima 2.9B + rdbt v2.0 双 LoRA（base→distilled addon，cfg=1, steps 默认 16）：实测 16 步追平/反超 anima29 30 步，anima29 系性价比最优",
+        "schema": "tool_schema_anima29_rdbt.json",
+        "knowledge": {
+            "anima29_rdbt_expert": "anima29_rdbt_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "aura": {
+        "description": "AuraAnima 2.9B Int8 量化·精度重视（er_sde+beta, steps 默认 12, cfg 4-5 默认 5）：质量/速度与 BF16 anima29 同档且显存约减半；风格标签默认 photo real，可选 anime color / real skin",
+        "schema": "tool_schema_aura.json",
+        "knowledge": {
+            "aura_expert": "aura_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
+    "aura-speed": {
+        "description": "AuraAnima 2.9B Int8 量化·速度重视（euler+simple, steps 默认 10, cfg 4-5 默认 5）：批量/迭代/简单场景/复杂构图用；风格标签默认 photo real，可选 anime color / real skin",
+        "schema": "tool_schema_aura_speed.json",
+        "knowledge": {
+            "aura_speed_expert": "aura_speed_expert.md",
             "artist_list": "artist_list.md",
         },
     },
@@ -172,6 +242,18 @@ def create_app() -> FastAPI:
             return executor.generate_v2(payload, "miao")
         if workflow == "miao_turbo":
             return executor.generate_v2(payload, "miao_turbo")
+        if workflow == "silvermoon":
+            return executor.generate_v2(payload, "silvermoon")
+        if workflow == "anima29":
+            return executor.generate_v2(payload, "anima29")
+        if workflow == "anima29_turbo":
+            return executor.generate_v2(payload, "anima29_turbo")
+        if workflow == "anima29_rdbt":
+            return executor.generate_v2(payload, "anima29_rdbt")
+        if workflow == "aura":
+            return executor.generate_v2(payload, "aura")
+        if workflow == "aura-speed":
+            return executor.generate_v2(payload, "aura-speed")
         return executor.generate(payload)
 
     @app.get("/health")
@@ -184,7 +266,15 @@ def create_app() -> FastAPI:
         return {
             "default": DEFAULT_WORKFLOW,
             "workflows": {
-                name: {"description": info["description"]}
+                name: {
+                    "description": info["description"],
+                    "deprecated": bool(info.get("deprecated")),
+                    "endpoints": {
+                        "generate": f"POST /generate（body 带 \"workflow\": \"{name}\"）",
+                        "schema": f"GET /schema?workflow={name}",
+                        "knowledge": f"GET /knowledge?workflow={name}",
+                    },
+                }
                 for name, info in WORKFLOWS.items()
             },
         }

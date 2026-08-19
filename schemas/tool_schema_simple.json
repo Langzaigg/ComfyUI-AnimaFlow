@@ -1,6 +1,6 @@
 {
   "name": "generate_anima",
-  "description": "生成接口。使用简化字段生成二次元插画；各工作流的提示词规则、质量前缀与推荐参数见对应 knowledge。",
+  "description": "生成接口。使用简化字段生成二次元插画；提示词规则、质量前缀与推荐参数见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {
@@ -40,7 +40,7 @@
       },
       "neg": {
         "type": "string",
-        "description": "负面提示词。留空时自动使用该工作流的默认负面，并按安全等级追加对立约束。",
+        "description": "负面提示词。留空时自动使用该工作流的默认负面，并按安全等级追加对立约束（正面 safe/sensitive → 负面加 nsfw, explicit，反之亦然）。",
         "default": ""
       },
       "cfg": {

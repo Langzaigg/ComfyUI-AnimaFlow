@@ -88,6 +88,52 @@ MIAO_TURBO_SAMPLER = ("euler", "normal")
 MIAO_TURBO_STEPS = 12
 MIAO_TURBO_CFG = 1.0
 
+# Silvermoon (silvermoonmixAnima_v23) 模型文件名
+# 官方推荐：Euler a + normal，CFG 4-5，steps 20-30
+# 步数实测（examples/silvermoon_steps_test.py）：20 步已收敛，25/30/35 无质量提升，
+# 30/35 步文字伪影反而更明显且耗时线性增长，故默认取 20 步。
+SILVERMOON_UNET_NAME = "silvermoonmixAnima_v23.safetensors"
+SILVERMOON_SAMPLER = ("euler_ancestral", "normal")
+SILVERMOON_STEPS = 20
+SILVERMOON_CFG = 4.5
+# 官方建议从无负面开始，但实测双人场景出现符文/类文字伪影、多人场景包装出现文字，
+# 故默认使用只针对文字类问题的精简负面。
+SILVERMOON_DEFAULT_NEGATIVE = "text, letters, sign, logo, watermark, signature, ui, interface"
+
+# Anima 2.9B v1.0（preview）：Anima base 的层扩展微调（28→40 层，~2.9B 参数），
+# 追加 1.7M 二次元/插画样本训练，知识截止 2026-07。训练数据无 score 标签（不用 score_N）。
+# 官方推荐：Euler + sgm-uniform（或 res-multistep + linear-quadratic），steps 28-50（最高质量 50），
+# CFG 3.5-5，分辨率 812x1216 / 1152x1536 / 1536x1536；提示词越详细越好。
+ANIMA29_UNET_NAME = "anima29B_v10.safetensors"
+ANIMA29_SAMPLER = ("euler", "sgm_uniform")
+ANIMA29_STEPS = 30
+ANIMA29_CFG = 4.0
+
+# Anima 2.9B Turbo LoRA（BF16）：配合 CFG 1 + 8-12 步使用
+ANIMA29_TURBO_LORA_NAME = "Anima-2.9B_Turbo-BF16.safetensors"
+ANIMA29_TURBO_STEPS = 8
+
+# rdbt v2.0 LoRA（anima2.9b p1）：base + distilled addon 双串联，CFG 1、默认 16 步。
+# 探针实测（examples/results/anima29_rdbt_probe_20260818_210509/report.md）：
+# 双 LoRA 16 步质量追平/反超 anima29 30 步，耗时仅 1/3-1/4；仅 base 在 16/20/25 步下均不可用
+# （16 步不收敛、25 步大部分收敛但仍追不平双 LoRA 且更慢），distilled addon 是必需组件。
+RDBT_BASE_LORA_NAME = "rdbt_v2.0_base_anima2.9b_p1_lora.safetensors"
+RDBT_DISTILLED_ADDON_LORA_NAME = "rdbt_v2.0_distilled_addon_anima2.9b_p1_lora.safetensors"
+RDBT_STEPS = 16
+
+# AuraAnima 2.9B qpolaP101 Int8 W8a8 量化模型文件名
+# anima29 的量化变体：质量与 BF16 同档（48 张完整场景测试无量化 artifacts），
+# 速度与 BF16 同档（~2.7 s/步），体积/显存约减半。
+# aura=精度重视（er_sde+beta 12 步，完整测试 11/12 场景质量第一），
+# aura-speed=速度重视（euler+simple 10 步，批量/简单场景/复杂构图噱头用）。
+# 风格质量标签三选一：anime color（动画，配画师 tag）/ photo real（写实，默认，勿配画师 tag）/ real skin（写实肤质，同勿配画师 tag）。
+AURA_UNET_NAME = "auranima29B_qpolaP101Int8W8a8.safetensors"
+AURA_SAMPLER = ("er_sde", "beta")
+AURA_STEPS = 12
+AURA_SPEED_SAMPLER = ("euler", "simple")
+AURA_SPEED_STEPS = 10
+AURA_CFG = 5.0
+
 
 @dataclass
 class AnimaToolConfig:

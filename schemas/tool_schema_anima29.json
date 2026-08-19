@@ -1,0 +1,99 @@
+{
+  "name": "generate_anima",
+  "description": "生成接口（Anima 2.9B）。使用简化字段生成二次元插画；提示词越详细越好，规则见对应 knowledge。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "quality_meta_year_safe": {
+        "type": "string",
+        "description": "年份/时期标签与安全等级，安全等级必须明确（safe/sensitive/nsfw/explicit）。避免一切质量与分数标签：masterpiece、great quality、best quality、score_N 等一律不要。",
+        "default": "year 2026, safe"
+      },
+      "count": {
+        "type": "string",
+        "description": "人数标签，如 '1girl' / '2girls' / '1boy' / '1other'。",
+        "default": "1girl"
+      },
+      "character": {
+        "type": "string",
+        "description": "角色名（可含括号作品信息），角色名后必须紧跟作品/版权标签。避免下划线：写 'hatsune miku' 而非 'hatsune_miku'。",
+        "default": ""
+      },
+      "series": {
+        "type": "string",
+        "description": "作品/系列名，随角色名一并给出。避免下划线。",
+        "default": ""
+      },
+      "appearance": {
+        "type": "string",
+        "description": "角色外观标签（逗号分隔的标准 Danbooru 标签）：发型发色、眼睛、服装、饰品等，只填有明确指代的标准 tag，不要编造（带下划线的标准 tag 可接受）。仅单角色使用；多角色时必须留空，外观在 tags 的自然语言部分逐角色分别描述。示例：'long silver hair, blue eyes, school uniform, wolf ears'",
+        "default": ""
+      },
+      "artist": {
+        "type": "string",
+        "description": "画师标签，必须以 @ 开头，如 '@makihitsuji'，建议显式提供以锚定画风。避免下划线。",
+        "default": ""
+      },
+      "tags": {
+        "type": "string",
+        "description": "通用标签：英文自然语言完整句子，描述场景、动作、服装、表情、构图与氛围，至少 2-3 句并写足细节（短提示词易出平淡的简单背景）。多角色时禁止写任何角色外貌信息，外貌用自然语言逐角色分别描述。"
+      },
+      "neg": {
+        "type": "string",
+        "description": "负面提示词。留空时自动使用默认负面，并按安全等级追加对立约束（正面 safe/sensitive → 负面加 nsfw, explicit，反之亦然）。",
+        "default": ""
+      },
+      "cfg": {
+        "type": "number",
+        "description": "CFG 引导强度。缺省使用该工作流的官方推荐值。"
+      },
+      "steps": {
+        "type": "integer",
+        "description": "采样步数。缺省使用该工作流的官方推荐值。"
+      },
+      "aspect_ratio": {
+        "type": "string",
+        "description": "图片比例。默认 1:1。",
+        "enum": ["16:9", "3:2", "1:1", "2:3", "9:16"],
+        "default": "1:1"
+      },
+      "width": {
+        "type": "integer",
+        "description": "宽度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "height": {
+        "type": "integer",
+        "description": "高度（像素），必须是 16 的倍数。若提供 width/height 则优先使用。",
+        "minimum": 64
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "批量生成数量。",
+        "default": 1,
+        "minimum": 1
+      },
+      "seed": {
+        "type": "integer",
+        "description": "随机种子。缺省则随机。",
+        "minimum": 0
+      },
+      "positive": {
+        "type": "string",
+        "description": "可选：直接提供最终正面提示词（覆盖结构化拼接）。通常不需要。",
+        "default": ""
+      },
+      "filename_prefix": {
+        "type": "string",
+        "description": "输出文件名前缀。缺省使用该工作流的默认前缀。",
+        "default": ""
+      }
+    },
+    "required": [
+      "quality_meta_year_safe",
+      "count",
+      "tags"
+    ],
+    "additionalProperties": false
+  }
+}

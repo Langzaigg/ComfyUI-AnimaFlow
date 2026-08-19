@@ -40,7 +40,7 @@
       },
       "neg": {
         "type": "string",
-        "description": "负面提示词。safe/sensitive 时追加 'nsfw, explicit'；nsfw/explicit 时追加 'safe, sensitive, censored, mosaic'。同时包含 'worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo'。",
+        "description": "负面提示词。注意 kira_turbo cfg=1：负面不进采样、不生效，不要填写。不想要的元素用正向写法规避（不要提及，用正向描述替代），仅 nsfw/explicit 分级时在 tags 末尾保留无码提示词 'no mosaic, uncensored'。",
         "default": ""
       },
       "aspect_ratio": {

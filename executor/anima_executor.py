@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, NOVA_UNET_NAME, NOVA_SAMPLER, NOVA_STEPS, NOVA_CFG, MIAO_UNET_NAME, MIAO_SAMPLER, MIAO_STEPS, MIAO_CFG, MIAO_TURBO_UNET_NAME, MIAO_TURBO_SAMPLER, MIAO_TURBO_STEPS, MIAO_TURBO_CFG
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, NOVA_UNET_NAME, NOVA_SAMPLER, NOVA_STEPS, NOVA_CFG, MIAO_UNET_NAME, MIAO_SAMPLER, MIAO_STEPS, MIAO_CFG, MIAO_TURBO_UNET_NAME, MIAO_TURBO_SAMPLER, MIAO_TURBO_STEPS, MIAO_TURBO_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_DEFAULT_NEGATIVE, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -192,6 +192,19 @@ def build_miao_negative_text(prompt_json: Dict[str, Any], turbo: bool = False) -
     return f"{base}, nsfw, explicit"
 
 
+def build_silvermoon_negative_text(prompt_json: Dict[str, Any]) -> str:
+    """
+    Silvermoon (silvermoonmixAnima_v23) 默认负面提示词。
+    基础只含文字类约束（SILVERMOON_DEFAULT_NEGATIVE）；
+    nsfw/explicit 分级时追加 mosaic, censored。
+    """
+    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
+    explicit = "nsfw" in q or "explicit" in q
+    if explicit:
+        return f"{SILVERMOON_DEFAULT_NEGATIVE}, mosaic, censored"
+    return SILVERMOON_DEFAULT_NEGATIVE
+
+
 def build_anima_positive_text(prompt_json: Dict[str, Any]) -> str:
     """
     按 Anima 官方推荐顺序拼接正面提示词。
@@ -243,6 +256,46 @@ _V2_MODEL_PRESETS = {
         "unet": MIAO_TURBO_UNET_NAME, "steps": MIAO_TURBO_STEPS, "cfg": MIAO_TURBO_CFG,
         "steps_range": (8, 30), "cfg_range": None,
         "sampler": MIAO_TURBO_SAMPLER[0], "scheduler": MIAO_TURBO_SAMPLER[1], "prefix": "AnimaTool_miao_turbo_",
+    },
+    "silvermoon": {
+        "unet": SILVERMOON_UNET_NAME, "steps": SILVERMOON_STEPS, "cfg": SILVERMOON_CFG,
+        "steps_range": (20, 30), "cfg_range": (4.0, 5.0),
+        "sampler": SILVERMOON_SAMPLER[0], "scheduler": SILVERMOON_SAMPLER[1], "prefix": "AnimaTool_silvermoon_",
+    },
+    # Anima 2.9B：base 的层扩展微调（训练数据无 score 标签；质量前缀避免一切质量/score 词，只留 year 2026 + 安全标签）。
+    # turbo 变体通过预设 "lora" 启用 Anima-2.9B_Turbo-BF16 LoRA（cfg 固定 1，steps 8-12）。
+    "anima29": {
+        "unet": ANIMA29_UNET_NAME, "steps": ANIMA29_STEPS, "cfg": ANIMA29_CFG,
+        "steps_range": (28, 50), "cfg_range": (3.5, 5.0),
+        "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_",
+    },
+    "anima29_turbo": {
+        "unet": ANIMA29_UNET_NAME, "steps": ANIMA29_TURBO_STEPS, "cfg": 1.0,
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.0),
+        "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_turbo_",
+        "lora": ANIMA29_TURBO_LORA_NAME, "lora_strength": 0.8,
+    },
+    # rdbt v2.0：base LoRA + distilled addon LoRA 双串联（lora_addon 在第一个 LoRA 之后链入）。
+    # 探针结论：16 步 cfg1 双 LoRA 为 anima29 系性价比最优；仅 base（无 addon）在任何步数下均不可用。
+    "anima29_rdbt": {
+        "unet": ANIMA29_UNET_NAME, "steps": RDBT_STEPS, "cfg": 1.0,
+        "steps_range": (8, 32), "cfg_range": (1.0, 1.0),
+        "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_rdbt_",
+        "lora": RDBT_BASE_LORA_NAME, "lora_strength": 1.0,
+        "lora_addon": RDBT_DISTILLED_ADDON_LORA_NAME, "lora_addon_strength": 1.0,
+    },
+    # AuraAnima 2.9B qpolaP101 Int8 W8a8：anima29 量化变体（质量/速度均与 BF16 同档，显存约减半）。
+    # aura=精度重视 er_sde+beta 12 步；aura-speed=速度重视 euler+simple 10 步。cfg 4.0-5.0 可调，默认 5.0。
+    # 风格质量标签由调用方在 quality_meta_year_safe 给出（默认 photo real，可选 anime color / real skin）。
+    "aura": {
+        "unet": AURA_UNET_NAME, "steps": AURA_STEPS, "cfg": AURA_CFG,
+        "steps_range": (8, 30), "cfg_range": (4.0, 5.0),
+        "sampler": AURA_SAMPLER[0], "scheduler": AURA_SAMPLER[1], "prefix": "AnimaTool_aura_",
+    },
+    "aura-speed": {
+        "unet": AURA_UNET_NAME, "steps": AURA_SPEED_STEPS, "cfg": AURA_CFG,
+        "steps_range": (8, 30), "cfg_range": (4.0, 5.0),
+        "sampler": AURA_SPEED_SAMPLER[0], "scheduler": AURA_SPEED_SAMPLER[1], "prefix": "AnimaTool_aura_speed_",
     },
 }
 
@@ -465,6 +518,96 @@ class AnimaExecutor:
             prev_model = [node_id, 0]
 
         wf["19"]["inputs"]["model"] = prev_model
+
+    @staticmethod
+    def _apply_perpneg_guider(wf: Dict[str, Any], seed: int, neg_scale: float) -> None:
+        """把统一模板中的 KSampler(19) 替换为 PerpNegGuider + SamplerCustomAdvanced 链路。
+
+        背景：KSampler 内部使用 CFGGuider，cfg=1.0 时负面分支数学上被抵消
+        （uncond + 1.0*(cond-uncond) == cond），ComfyUI 实际执行时也会直接跳过
+        负面计算，因此 turbo LoRA（cfg 固定 1）下负面提示词完全无效。
+        PerpNegGuider（ComfyUI 核心节点，comfy_extras/nodes_perpneg.py）用独立的
+        neg_scale 施加负面提示词相对空条件的垂直分量，cfg=1 时负面依然生效：
+        输出 = pos - neg_scale * perp(neg - empty)。turbo 画风（cfg=1 的正向轨迹）
+        保持不变，仅按 neg_scale 强度排除负面内容。
+
+        代价：每步需计算 positive + negative + empty 三次前向，单步耗时约 2-3 倍
+        （10 步 turbo 约等效 base 25-30 步开销），建议 neg_scale 1.5-3.0。
+        仅支持使用统一模板 + KSampler(19) 的工作流（_inject_v2 系列）。
+        """
+        ksampler = wf.get("19")
+        if not ksampler or "inputs" not in ksampler:
+            raise RuntimeError("unified 模板缺少 KSampler(19)，无法切换 PerpNegGuider")
+        inp = ksampler["inputs"]
+        model_src = inp["model"]
+        clip_src = wf["11"]["inputs"]["clip"]
+
+        # 空条件：perp-neg 的负面锚点（negative 相对 empty 的垂直分量才是排除方向）
+        wf["70"] = {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"clip": clip_src, "text": ""},
+        }
+        wf["71"] = {
+            "class_type": "PerpNegGuider",
+            "inputs": {
+                "model": model_src,
+                "positive": inp["positive"],
+                "negative": inp["negative"],
+                "empty_conditioning": ["70", 0],
+                "cfg": float(inp["cfg"]),
+                "neg_scale": float(neg_scale),
+            },
+        }
+        wf["72"] = {
+            "class_type": "RandomNoise",
+            "inputs": {"noise_seed": int(seed)},
+        }
+        wf["73"] = {
+            "class_type": "KSamplerSelect",
+            "inputs": {"sampler_name": inp["sampler_name"]},
+        }
+        wf["74"] = {
+            "class_type": "BasicScheduler",
+            "inputs": {
+                "model": model_src,
+                "scheduler": inp.get("scheduler", "normal"),
+                "steps": int(inp["steps"]),
+                "denoise": float(inp.get("denoise", 1.0)),
+            },
+        }
+        wf["75"] = {
+            "class_type": "SamplerCustomAdvanced",
+            "inputs": {
+                "noise": ["72", 0],
+                "guider": ["71", 0],
+                "sampler": ["73", 0],
+                "sigmas": ["74", 0],
+                "latent_image": inp["latent_image"],
+            },
+        }
+        wf["8"]["inputs"]["samples"] = ["75", 0]
+        del wf["19"]
+
+    @staticmethod
+    def _apply_nag_patch(wf: Dict[str, Any], node_class: str, inputs: Dict[str, Any]) -> None:
+        """在 KSampler(19) 的 model 链上插入 NAG 系模型补丁节点（不改采样器结构）。
+
+        NAG（Normalized Attention Guidance）在注意力输出上把正向从负向推开并归一化，
+        专为 cfg=1 的蒸馏/turbo 模型设计（此时 KSampler 的负面分支原本不生效）。
+        - node_class="NAGuidance"：ComfyUI 内核节点（patch attn1 自注意力路径）
+        - node_class="AnimaNormalizedAttentionGuidance"：ComfyUI-Anima-NAG 插件节点，
+          wrap optimized_attention，覆盖 Anima/Cosmos Predict2 的交叉注意力路径
+        """
+        if "19" not in wf or "inputs" not in wf["19"] or "model" not in wf["19"]["inputs"]:
+            raise RuntimeError("unified 模板缺少 KSampler(19)，无法插入 NAG 节点")
+        prev_model = wf["19"]["inputs"]["model"]
+        numeric_ids = [int(k) for k in wf.keys() if str(k).isdigit()]
+        node_id = str((max(numeric_ids) + 1) if numeric_ids else 1)
+        wf[node_id] = {
+            "class_type": node_class,
+            "inputs": {"model": prev_model, **inputs},
+        }
+        wf["19"]["inputs"]["model"] = [node_id, 0]
 
     # -------------------------
     # HTTP helpers (requests 优先, 无则 urllib)
@@ -694,10 +837,10 @@ class AnimaExecutor:
 
     def _inject_v2(self, prompt_json: Dict[str, Any], model: str) -> Dict[str, Any]:
         """
-        新模型 v1.0 统一工作流注入：turbo-v1.0、aesthetic-v1.0 与 nova 共用同一模板。
-        三者都是完整 UNET，不依赖额外 LoRA，因此 LoRA strength 固定为 0。
+        新模型 v1.0 统一工作流注入：turbo-v1.0、aesthetic-v1.0、nova、silvermoon、anima29 等共用同一模板。
+        完整 UNET 的模型 LoRA 关闭；预设带 "lora" 的变体（如 anima29_turbo）启用对应 LoRA。
 
-        model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo）
+        model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo / silvermoon / anima29 等）
         """
         preset = _V2_MODEL_PRESETS.get(model)
         if preset is None:
@@ -715,8 +858,33 @@ class AnimaExecutor:
         wf["44"]["inputs"]["unet_name"] = str(unet_name)
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
-        # 新模型均为完整 UNET，不需要额外 turbo LoRA
-        wf["60"]["inputs"]["strength_model"] = 0.0
+        # LoRA：预设带 "lora" 时启用（如 anima29_turbo 的 Anima-2.9B_Turbo-BF16），
+        # 其余完整 UNET 模型关闭 LoRA。可用 prompt_json 的 lora_name / lora_strength 覆盖。
+        preset_lora = preset.get("lora")
+        if preset_lora or prompt_json.get("lora_name"):
+            wf["60"]["inputs"]["lora_name"] = str(prompt_json.get("lora_name") or preset_lora)
+            wf["60"]["inputs"]["strength_model"] = float(
+                prompt_json.get("lora_strength") or preset.get("lora_strength", 1.0)
+            )
+        else:
+            wf["60"]["inputs"]["strength_model"] = 0.0
+
+        # 预设可再带 "lora_addon"（如 anima29_rdbt 的 rdbt distilled addon）：
+        # 在第一个 LoRA(60) 与 KSampler(19) 之间串联第二个 LoraLoaderModelOnly（与 _inject_loras 同构）。
+        # addon 依赖第一个 LoRA 处于启用状态（strength>0），否则跳过。
+        preset_lora_addon = preset.get("lora_addon")
+        if preset_lora_addon and float(wf["60"]["inputs"].get("strength_model") or 0) > 0:
+            numeric_ids = [int(k) for k in wf.keys() if str(k).isdigit()]
+            addon_id = str(max(numeric_ids) + 1)
+            wf[addon_id] = {
+                "class_type": "LoraLoaderModelOnly",
+                "inputs": {
+                    "model": wf["19"]["inputs"]["model"],
+                    "lora_name": str(preset_lora_addon),
+                    "strength_model": float(preset.get("lora_addon_strength", 1.0)),
+                },
+            }
+            wf["19"]["inputs"]["model"] = [addon_id, 0]
 
         # 文本（与 turbo 一致的字段拼接顺序，使用自然语言 tags）
         positive = (prompt_json.get("positive") or "").strip()
@@ -730,6 +898,8 @@ class AnimaExecutor:
                 negative = build_miao_negative_text(prompt_json)
             elif model == "miao_turbo":
                 negative = build_miao_negative_text(prompt_json, turbo=True)
+            elif model == "silvermoon":
+                negative = build_silvermoon_negative_text(prompt_json)
             else:
                 negative = build_new_models_negative_text(prompt_json)
 
@@ -788,6 +958,35 @@ class AnimaExecutor:
 
         # 文件名前缀
         wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or preset["prefix"])
+
+        # 可选：cfg=1 时让负面提示词生效的引导方式（三种互斥，默认全关闭）：
+        # - neg_scale>1：PerpNegGuider 替换 KSampler（负面垂直分量，见 _apply_perpneg_guider）
+        # - nag_scale>0：内核 NAGuidance 模型补丁（attn1 自注意力路径）
+        # - anima_nag_scale>0：ComfyUI-Anima-NAG 插件补丁（覆盖 Anima 交叉注意力，需已安装插件）
+        neg_scale = float(prompt_json.get("neg_scale") or 1.0)
+        nag_scale = float(prompt_json.get("nag_scale") or 0.0)
+        anima_nag_scale = float(prompt_json.get("anima_nag_scale") or 0.0)
+        active = [neg_scale > 1.0, nag_scale > 0.0, anima_nag_scale > 0.0]
+        if sum(active) > 1:
+            raise ValueError("neg_scale / nag_scale / anima_nag_scale 互斥，一次只能启用一种负面引导")
+        if neg_scale > 1.0:
+            self._apply_perpneg_guider(wf, seed=int(seed), neg_scale=neg_scale)
+        elif nag_scale > 0.0:
+            self._apply_nag_patch(wf, "NAGuidance", {
+                "nag_scale": nag_scale,
+                "nag_alpha": float(prompt_json.get("nag_alpha") or 0.5),
+                "nag_tau": float(prompt_json.get("nag_tau") or 1.5),
+            })
+        elif anima_nag_scale > 0.0:
+            self._apply_nag_patch(wf, "AnimaNormalizedAttentionGuidance", {
+                "scale": anima_nag_scale,
+                "tau": float(prompt_json.get("anima_nag_tau") or 2.5),
+                "alpha": float(prompt_json.get("anima_nag_alpha") or 0.5),
+                "start_percent": 0.0,
+                "end_percent": float(prompt_json.get("anima_nag_end_percent") or 0.5),
+                "only_anima": True,
+                "optimize_outside_range": True,
+            })
 
         return wf
 
@@ -1603,7 +1802,7 @@ class AnimaExecutor:
         新模型 v1.0 统一生成入口。
 
         参数：
-        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo）
+        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo / silvermoon / anima29 等）
         - 其余字段与 turbo 模式一致，使用自然语言 tags
         """
         prompt = self._inject_v2(prompt_json, model)
@@ -1635,7 +1834,11 @@ class AnimaExecutor:
             }
             images_data.append(img_info)
 
-        actual_seed = int(prompt["19"]["inputs"]["seed"])
+        # PerpNeg 模式下 KSampler(19) 已被替换删除，种子在 RandomNoise(72).noise_seed
+        if "19" in prompt:
+            actual_seed = int(prompt["19"]["inputs"]["seed"])
+        else:
+            actual_seed = int(prompt["72"]["inputs"]["noise_seed"])
         actual_positive = prompt["11"]["inputs"]["text"]
         actual_negative = prompt["12"]["inputs"]["text"]
         actual_width = int(prompt["28"]["inputs"]["width"])
