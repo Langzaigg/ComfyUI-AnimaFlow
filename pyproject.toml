@@ -1,15 +1,15 @@
 [project]
 name = "comfyui-animaflow"
 version = "1.0.0"
-description = "AnimaFlow（前身 ComfyUI-AnimaTool）：多模型多工作流的 AI Tool Use API，支持 Anima base/turbo/aesthetic 与 Kira 系列。支持 MCP Server（Cursor/Claude 原生显示图片）、HTTP API 和 CLI。"
-license = "MIT"
+description = "AnimaFlow（前身 ComfyUI-AnimaTool）：多模型多工作流的 AI Tool Use API（Anima base/turbo/2.9B/Aura 等）。支持 MCP Server（Cursor/Claude 原生显示图片）、HTTP API 和 CLI。"
+license = "AGPL-3.0-only"
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["comfyui", "anima", "anime", "illustration", "mcp", "tool-use", "ai-agent"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

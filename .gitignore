@@ -1,5 +1,14 @@
 # Generated images
 outputs/
+examples/results/
+
+# Local test artifacts（本地保留，不进 git；requests/ 与 loras/ 下的示例除外）
+examples/*
+!examples/requests/
+!examples/loras/
+
+# Agent workspace
+.workbuddy/
 
 # Python
 __pycache__/
