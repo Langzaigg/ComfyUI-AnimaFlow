@@ -8,12 +8,9 @@
 
 ## 安装方法
 
-### 方法 1：ComfyUI Manager（推荐）
+### 方法 1：ComfyUI Manager
 
-1. 打开 ComfyUI Manager
-2. 搜索 "AnimaFlow"
-3. 点击 Install
-4. 重启 ComfyUI
+> ComfyUI Manager 暂时无法安装本插件，请使用方法 2 手动安装。
 
 ### 方法 2：手动安装
 

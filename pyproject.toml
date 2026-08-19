@@ -37,7 +37,7 @@ Issues = "https://github.com/Langzaigg/ComfyUI-AnimaFlow/issues"
 [tool.comfy]
 PublisherId = "YOUR_PUBLISHER_ID"
 DisplayName = "AnimaFlow"
-Icon = "assets/screenshot.webp"
+Icon = "assets/example_picnic_compare.webp"
 
 [build-system]
 requires = ["setuptools>=61.0"]

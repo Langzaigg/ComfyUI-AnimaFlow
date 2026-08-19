@@ -1,10 +1,6 @@
 # AnimaFlow
 
-> 前身 ComfyUI-AnimaTool。把 ComfyUI 上的 Anima 系列模型包装成 AI Agent 可直接调用的统一 Tool Use API。
-
-<p align="center">
-  <img src="assets/hero.webp" alt="AnimaFlow Demo" width="100%">
-</p>
+> 前身 ComfyUI-AnimaTool。把 ComfyUI 上的 Anima 系列模型包装成 AI Agent 可直接调用的统一 Tool Use API，现已整合 **Anima 2.9B 系列全套工作流**：完整模型、Turbo LoRA（8 步）、rdbt 双 LoRA（16 步）与 Aura Int8 量化。
 
 <p align="center">
   Cursor / Claude / Gemini / OpenAI → MCP / HTTP API → ComfyUI → Anima 模型
@@ -12,25 +8,24 @@
 
 ## 特性
 
+- **整合 Anima 2.9B 系列**：`anima29` 完整 UNET + `anima29_turbo`（Turbo LoRA，cfg=1，8 步）+ `anima29_rdbt`（rdbt v2.0 双 LoRA，16 步）+ `aura` / `aura_speed`（Int8 量化，显存减半），质量与速度多档可选
 - **多工作流统一 API**：base / turbo / 2.9B / Aura 等多模型，通过 `workflow` 参数切换
 - **工作流发现 API**：`GET /anima/workflows` 返回全部工作流的 schema、知识与弃用状态，下游服务启动时动态拉取即可，工作流增删改无需额外适配
 - **三种接入方式**：MCP Server（图片原生显示在聊天窗口）、ComfyUI 内置 HTTP API、独立 FastAPI / CLI
 - **结构化提示词**：按各模型规范自动拼接（tag 系 / 自然语言系各自匹配）
 - **14 种长宽比预设**（21:9 ~ 9:21）、`repeat` / `batch_size` 批量生成、历史记录与 reroll
 
-![Screenshot](assets/screenshot.webp)
-
 ## 安装
 
-**方式一（推荐）**：ComfyUI Manager 搜索 "AnimaFlow" 安装，重启 ComfyUI。
-
-**方式二：手动安装**
+> ComfyUI Manager 暂时无法安装本插件，请使用手动安装。
 
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/Langzaigg/ComfyUI-AnimaFlow.git
 pip install -r ComfyUI-AnimaFlow/requirements.txt
 ```
+
+安装后重启 ComfyUI。
 
 所需模型文件（按工作流选用，文件名可用环境变量覆盖）：
 
