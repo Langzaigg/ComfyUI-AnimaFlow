@@ -203,7 +203,7 @@ curl -X POST "http://127.0.0.1:8188/anima/generate" -d '{"workflow": "kira", "co
 | 环境变量 | `ANIMATOOL_*`、`COMFYUI_*` | 改名会破坏现有部署配置 |
 | 输出文件名前缀 | `AnimaTool_*` 等 | 与历史归档一致 |
 | MCP server 名 | `anima-tool` | 客户端（Cursor/Claude 等）配置无需修改 |
-| GitHub 仓库 URL | `Moeblack/ComfyUI-AnimaTool` | 仓库本身尚未改名 |
+| GitHub 仓库 URL | `Langzaigg/ComfyUI-AnimaFlow` | 原 `Moeblack/ComfyUI-AnimaTool` 为上游前身仓库 |
 
 ---
 

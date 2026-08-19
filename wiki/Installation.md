@@ -11,7 +11,7 @@
 ### 方法 1：ComfyUI Manager（推荐）
 
 1. 打开 ComfyUI Manager
-2. 搜索 "Anima Tool"
+2. 搜索 "AnimaFlow"
 3. 点击 Install
 4. 重启 ComfyUI
 
@@ -19,8 +19,8 @@
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/Moeblack/ComfyUI-AnimaTool.git
-pip install -r ComfyUI-AnimaTool/requirements.txt
+git clone https://github.com/Langzaigg/ComfyUI-AnimaFlow.git
+pip install -r ComfyUI-AnimaFlow/requirements.txt
 ```
 
 ## 模型文件

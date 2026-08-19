@@ -22,14 +22,14 @@
 
 ## 安装
 
-**方式一（推荐）**：ComfyUI Manager 搜索 "Anima Tool" 安装，重启 ComfyUI。
+**方式一（推荐）**：ComfyUI Manager 搜索 "AnimaFlow" 安装，重启 ComfyUI。
 
 **方式二：手动安装**
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/Moeblack/ComfyUI-AnimaTool.git
-pip install -r ComfyUI-AnimaTool/requirements.txt
+git clone https://github.com/Langzaigg/ComfyUI-AnimaFlow.git
+pip install -r ComfyUI-AnimaFlow/requirements.txt
 ```
 
 所需模型文件（按工作流选用，文件名可用环境变量覆盖）：
@@ -54,7 +54,7 @@ pip install -r ComfyUI-AnimaTool/requirements.txt
   "mcpServers": {
     "anima-tool": {
       "command": "C:\\ComfyUI\\.venv\\Scripts\\python.exe",
-      "args": ["C:\\ComfyUI\\custom_nodes\\ComfyUI-AnimaTool\\servers\\mcp_server.py"]
+      "args": ["C:\\ComfyUI\\custom_nodes\\ComfyUI-AnimaFlow\\servers\\mcp_server.py"]
     }
   }
 }
@@ -151,7 +151,7 @@ python -m servers.cli --help
 
 ## 文档
 
-- [📖 Wiki](https://github.com/Moeblack/ComfyUI-AnimaTool/wiki)：安装教程、提示词指南、API 参考、模型对比
+- [📖 Wiki](wiki/Home.md)：安装教程、提示词指南、API 参考、模型对比
 - [MCP_SETUP.md](MCP_SETUP.md)：MCP 客户端配置（含酒馆 SillyTavern）
 - [MIGRATION.md](MIGRATION.md)：版本迁移说明与下游 API 适配指南
 - [CURSOR_SKILL.md](CURSOR_SKILL.md)：给 Cursor/Windsurf 的 Agent Skill

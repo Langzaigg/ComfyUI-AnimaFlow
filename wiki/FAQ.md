@@ -186,4 +186,4 @@ ComfyUI 支持的所有采样器都可以使用。推荐：
 
 ## 还有问题？
 
-请在 [GitHub Issues](https://github.com/Moeblack/ComfyUI-AnimaTool/issues) 提交问题。
+请在 [GitHub Issues](https://github.com/Langzaigg/ComfyUI-AnimaFlow/issues) 提交问题。
