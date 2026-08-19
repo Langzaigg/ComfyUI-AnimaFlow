@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **README 重写**: 精简为快速入口（安装 / 三种接入 / 工作流一览与选型 / 文档导航），详细参数与故障排查移至 wiki；新增「工作流特点与选型」章节与同 prompt 同 seed 的多人兽耳娘场景六工作流对比例图（`assets/example_picnic_compare.webp`）；测试脚本与生成结果（`examples/` 测试代码、`outputs/`）不再进 git，仅保留 `examples/requests/` 与 `examples/loras/` 示例。
+
 ### Added
 
 - **Anima 2.9B 工作流**: 新增 `anima29` / `anima29_turbo` workflow，使用 `anima29B_v10.safetensors`（Anima base 的 28→40 层扩展微调，知识截止 2026-07）。
