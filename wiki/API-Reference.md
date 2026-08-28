@@ -129,22 +129,23 @@ MCP Server 返回：
 | workflow | 说明 |
 |----------|------|
 | `base`（缺省） | Base 1.0：完整字段工作流 |
-| `turbo` | Turbo 0.2（Legacy）：base UNET + turbo LoRA 快速生成 |
-| `turbo_v1` | Turbo 1.0：独立完整 UNET 快速生成 |
+| `turbo_v1` | Turbo 1.0（实为 1.1）：独立完整 UNET 快速生成 |
+| `fuse` | Fuse：turbo 1.1 × Anima 2.9B P1 融合 UNET 快速生成（内置文字类负面，默认 cfg 1.2） |
 | `aesthetic_v1` | Aesthetic 1.0：高质量微调完整 UNET |
-| `kira` | Kira (Kirazuri Anima v4)：Anima 微调 UNET（cfg 4-5，steps 30-50，er_sde） |
-| `kira_turbo` | Kira Turbo：Kira + 8-step LoRA（cfg=1，steps=8，默认 1024×1024） |
 | `ultrareal` | UltraReal (UltraReal_FineTune_Anima_base1_v3)：真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式） |
-| `nova` | Nova (novaAnimeAM v4.0)：完整 UNET（cfg 4-6，steps 20-30，Euler a + normal），score_N 质量前缀 |
-| `miao` | Miao (MiaomiaoHarem Anima 1.5)：完整 UNET（cfg 4-5，steps 30），score_N 质量前缀 |
-| `miao_turbo` | Miao Turbo (MiaomiaoHarem Anima 8-step)：快速 UNET（cfg=1，steps 8-30 推荐 12） |
+| `silvermoon` | Silvermoon (silvermoonmixAnima_v23)：混合模型（cfg 4-5，steps 默认 20，Euler a + normal），score_N 质量前缀 |
+| `anima29` | Anima 2.9B v1.0：base 层扩展微调（cfg 3.5-5，steps 28-50 默认 30，euler + sgm_uniform） |
+| `anima29_turbo` | Anima 2.9B + Turbo-ANIMA-v2.9 LoRA（强度 0.8，cfg 1-1.6，steps 8-12 默认 8） |
+| `anima29_rdbt` | Anima 2.9B + rdbt v2.0 双 LoRA（cfg 1-1.6，steps 8-32 默认 16） |
+| `aura` | AuraAnima 2.9B Int8 量化·精度重视（er_sde+beta，steps 默认 12，cfg 4-5） |
+| `aura-speed` | AuraAnima 2.9B Int8 量化·速度重视（euler+simple，steps 默认 10，cfg 4-5） |
 
 - `GET /anima/schema?workflow=turbo_v1` — 返回对应工作流的 Tool Schema
 - `GET /anima/knowledge?workflow=turbo_v1` — 返回对应工作流的专家知识
-- `POST /anima/generate?workflow=turbo` 或在请求体顶层加 `"workflow": "turbo"` — 用对应工作流生成
+- `POST /anima/generate?workflow=fuse` 或在请求体顶层加 `"workflow": "fuse"` — 用对应工作流生成
 - `GET /anima/workflows` — 列出所有可用工作流及缺省值
 
-旧的独立端点（`/anima/schema_turbo`、`/anima/knowledge_turbo`、`/anima/generate_turbo` 等）保持兼容、继续可用，等价于主 API 固定 workflow 的写法。
+旧的独立端点（`/anima/generate_turbo_v1`、`/anima/generate_aesthetic_v1`、`/anima/schema_turbo_v1`、`/anima/schema_aesthetic_v1`、`/anima/knowledge_new_models`）保持兼容、继续可用，等价于主 API 固定 workflow 的写法。
 
 ### GET /anima/health
 
@@ -284,58 +285,13 @@ MCP Server 返回：
 
 ---
 
-### Turbo 0.2（Legacy）端点
-
-Turbo 0.2 使用 base UNET + turbo LoRA 实现快速生成。简化字段。
-
-#### GET /anima/schema_turbo
-
-返回 Turbo 0.2 Tool Schema（简化字段，`aspect_ratio` 限 5 种，不含 `style`/`tags`/`environment`/`neg`）。
-
-#### GET /anima/knowledge_turbo
-
-返回 Turbo 0.2 专家知识：
-
-```json
-{
-  "turbo_expert": "...",
-  "artist_list": "...",
-  "turbo_examples": "..."
-}
-```
-
-#### POST /anima/generate_turbo
-
-执行 Turbo 0.2 快速生成（cfg=1, steps=10, 内置 turbo LoRA）。
-
-**请求体**：
-
-```json
-{
-  "quality_meta_year_safe": "masterpiece, best quality, highres, newest, year 2025, safe",
-  "count": "1girl",
-  "character": "hatsune miku",
-  "series": "vocaloid",
-  "appearance": "long teal hair, blue eyes, school uniform",
-  "artist": "@rurudo",
-  "tags": "standing, looking at viewer, smile, upper body, classroom, sunlight. A girl is standing in a classroom. Soft daylight.",
-  "aspect_ratio": "1:1"
-}
-```
-
-> `tags` 以标准 Danbooru 标签（逗号分隔）为主；没有特别符合的标准 tag 时用英文自然语言句子补充，不要编造不标准 tag。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，外貌在自然语言部分逐角色分别描述。`cfg`/`steps`/`neg` 由后端固定，无需传入。
-
-**响应**：与 `/anima/generate` 一致。
-
----
-
 ### Turbo v1.0 端点
 
 Turbo v1.0 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 `neg` 字段。
 
 #### GET /anima/schema_turbo_v1
 
-返回 Turbo v1.0 Schema（简化字段，包含 `neg`，`cfg` 范围 0.7-1，`steps` 范围 8-12）。
+返回 Turbo v1.0 Schema（简化字段，包含 `neg`，`cfg` 范围 1.0-1.6，`steps` 范围 8-12）。
 
 #### POST /anima/generate_turbo_v1
 
@@ -359,7 +315,7 @@ Turbo v1.0 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 
 }
 ```
 
-> `tags` 以标准 Danbooru 标签为主，无标准 tag 的内容用英文自然语言补充。`steps` 默认 10，`cfg` 默认 1。`neg` 可选，留空时后端按安全等级自动填充。
+> `tags` 以标准 Danbooru 标签为主，无标准 tag 的内容用英文自然语言补充。`steps` 默认 10，`cfg` 默认 1（写 `neg` 时默认 1.2 使负面生效）。`neg` 可选，留空时后端按安全等级自动填充。
 
 **响应**：与 `/anima/generate` 一致。
 
@@ -395,35 +351,6 @@ Aesthetic v1.0 是完整 UNET 模型，在高质量图像上微调。简化字�
 
 ---
 
-### Kira 工作流
-
-Kira (Kirazuri Anima v4) 是 Anima 的微调模型，通过主 API 的 `workflow` 参数使用（无独立兼容端点）：
-
-| workflow | 说明 |
-|----------|------|
-| `kira` | 完整 UNET，cfg 4-5（默认 4.5），steps 30-50（默认 35），采样器固定 `er_sde` |
-| `kira_turbo` | Kira + 8-step LoRA，固定 cfg=1 / steps=8（payload 传入无效），主用 `res_2s`+`bong_tangent`（需 RES4LYF 节点），不可用自动回落 `res_multistep`+`simple`，默认 1024×1024 |
-
-```bash
-# Schema / 知识
-curl "http://127.0.0.1:8188/anima/schema?workflow=kira_turbo"
-curl "http://127.0.0.1:8188/anima/knowledge?workflow=kira"
-
-# 生成
-curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=kira_turbo" \
-  -H "Content-Type: application/json" \
-  -d '{"quality_meta_year_safe":"masterpiece, best quality, very aesthetic, sensitive","count":"1girl","character":"yukikaze (azur lane)","series":"azur lane","tags":"A girl charges across the ocean surface amid a naval battle, her rigging cannons firing. Explosions and black smoke rise in the background under a cloudy blue sky."}'
-```
-
-与 base Anima 的提示词差异：
-
-- 标签顺序：`[质量/美学/安全] [角色] [作品] [画师] [人数] [通用标签]`（人数标签靠后，由后端自动组装）
-- 美学标签：`very aesthetic` / `aesthetic` 为本模型特有，可引导模型自带审美倾向
-- `tags` 使用**英文自然语言完整句子**（至少 2-3 句、写足细节），不要用标签堆叠——短提示词/纯标签在本模型上容易概念串扰
-- 风格标签：`painterly`、`chiaroscuro`、`ligne claire`、`flat color`、`no lineart`、`blending`、`traditional media`、`oil painting \(medium\)`、`watercolor \(medium\)`
-
----
-
 ### UltraReal 工作流
 
 UltraReal (UltraReal_FineTune_Anima_base1_v3) 是 Anima base1.0 的真实系微调，生成写实照片风图片，通过主 API 的 `workflow=ultrareal` 使用：
@@ -453,17 +380,18 @@ curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=ultrareal" \
 | 模型 | 端点 | cfg | steps | neg | 字段 |
 |------|------|-----|-------|-----|------|
 | Base 1.0 | `/anima/generate` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 全部 14 字段 |
-| Turbo 0.2 | `/anima/generate_turbo` | 固定 1 | 固定 10 | 无 | 简化（无 style/tags/environment/neg） |
-| Turbo 1.0 | `/anima/generate_turbo_v1` | 0.7-1, 默认 1 | 8-12, 默认 10 | 有 | 简化（无 style/tags/environment） |
+| Turbo 1.0 | `/anima/generate_turbo_v1` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 有 | 简化（无 style/tags/environment） |
+| Fuse | `/anima/generate?workflow=fuse` | 1-1.6，默认 1.2（内置文字类负面常驻） | 8-12, 默认 8 | 有（内置默认） | 简化（无 style/tags/environment） |
 | Aesthetic 1.0 | `/anima/generate_aesthetic_v1` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 简化（无 style/tags/environment） |
-| Kira | `/anima/generate?workflow=kira` | 4-5, 默认 4.5 | 30-50, 默认 35 | 有 | 简化（无 style/tags/environment） |
-| Kira Turbo | `/anima/generate?workflow=kira_turbo` | 固定 1 | 固定 8 | 有 | 简化，默认 1024×1024 |
-| UltraReal | `/anima/generate?workflow=ultrareal` | 默认 4 | 默认 28 | 有 | 三段式（tags 前缀 + nltags 自然语言 + 后缀） |
-| Nova | `/anima/generate?workflow=nova` | 4-6, 默认 5 | 20-30, 默认 25 | 有 | 简化（无 style/tags/environment），score_N 质量前缀 |
-| Miao | `/anima/generate?workflow=miao` | 4-5, 默认 4.5 | 默认 30 | 有 | 简化（无 style/tags/environment），score_N 质量前缀 |
-| Miao Turbo | `/anima/generate?workflow=miao_turbo` | 建议固定 1 | 8-30, 推荐 12 | 有（cfg=1 时不生效） | 简化（无 style/tags/environment），score_N 质量前缀 |
+| UltraReal | `/anima/generate?workflow=ultrareal` | 默认 4 | 默认 28 | 有（内置默认） | 三段式（tags 前缀 + nltags 自然语言 + 后缀） |
+| Silvermoon | `/anima/generate?workflow=silvermoon` | 4-5, 默认 4.5 | 20-30, 默认 20 | 有（内置文字类默认负面） | 简化（无 style/tags/environment），score_N 质量前缀 |
+| Anima 2.9B | `/anima/generate?workflow=anima29` | 3.5-5, 默认 4 | 28-50, 默认 30 | 有 | 简化（无 style/tags/environment），无质量词前缀 |
+| Anima 2.9B Turbo | `/anima/generate?workflow=anima29_turbo` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 8 | 有 | 简化，无质量词前缀 |
+| Anima 2.9B rdbt | `/anima/generate?workflow=anima29_rdbt` | 1-1.6，默认 1（写 neg 时 1.2） | 8-32, 默认 16 | 有 | 简化，无质量词前缀 |
+| Aura | `/anima/generate?workflow=aura` | 4-5, 默认 5 | 8-30, 默认 12 | 有 | 简化，风格质量标签三选一 |
+| Aura-speed | `/anima/generate?workflow=aura-speed` | 4-5, 默认 5 | 8-30, 默认 10 | 有 | 简化，风格质量标签三选一 |
 
-> 简化字段工作流（turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / nova / miao / miao_turbo）的 `tags` 为英文自然语言完整句子；base 的自然语言在 `nltags`，ultrareal 为三段式。`appearance` 等标签字段只填有明确指代的标准 Danbooru tag，不要编造。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分逐角色分别描述。
+> 简化字段工作流（turbo_v1 / fuse / aesthetic_v1 / silvermoon / anima29 系 / aura 系）的 `tags` 为英文自然语言完整句子；base 的自然语言在 `nltags`，ultrareal 为三段式。`appearance` 等标签字段只填有明确指代的标准 Danbooru tag，不要编造。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分逐角色分别描述。
 
 ---
 

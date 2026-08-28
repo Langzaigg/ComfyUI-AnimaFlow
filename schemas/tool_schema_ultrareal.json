@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_ultrareal",
-  "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3) 生成接口。Anima base1.0 的真实系微调，生成写实照片风图片（手机自拍/数码相机/胶片/VHS/单反），适合生活照、写真、电影感场景。tags 填 @ 开头的相机/灯光/风格标签，nltags 填英文自然语言场景描述，quality_meta_year_safe 填安全等级 + @年份 + score_N。",
+  "description": "AnimaTool 图像生成接口（Anima 系写实照片风模型）。使用结构化字段与自然语言描述画面；字段与提示词规则见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {

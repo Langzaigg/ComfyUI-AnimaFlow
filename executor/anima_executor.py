@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, KIRA_UNET_NAME, KIRA_TURBO_LORA_NAME, KIRA_TURBO_SAMPLER, KIRA_TURBO_SAMPLER_FALLBACK, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, NOVA_UNET_NAME, NOVA_SAMPLER, NOVA_STEPS, NOVA_CFG, MIAO_UNET_NAME, MIAO_SAMPLER, MIAO_STEPS, MIAO_CFG, MIAO_TURBO_UNET_NAME, MIAO_TURBO_SAMPLER, MIAO_TURBO_STEPS, MIAO_TURBO_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_DEFAULT_NEGATIVE, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_DEFAULT_NEGATIVE, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_DEFAULT_NEGATIVE
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -99,23 +99,6 @@ def build_turbo_positive_text(prompt_json: Dict[str, Any]) -> str:
     )
 
 
-def build_kira_positive_text(prompt_json: Dict[str, Any]) -> str:
-    """
-    Kira (Kirazuri Anima v4) 拼接正面提示词。
-    与 base 的差异：人数标签移到 artist 之后（该模型数据集中 count 组位置靠后）。
-    顺序：[质量/美学/安全] [角色] [作品] [画师] [人数] [外观] [通用标签(自然语言)]
-    """
-    return _join_csv(
-        prompt_json.get("quality_meta_year_safe", ""),
-        prompt_json.get("character", ""),
-        prompt_json.get("series", ""),
-        prompt_json.get("artist", ""),
-        prompt_json.get("count", ""),
-        prompt_json.get("appearance", ""),
-        prompt_json.get("tags", ""),
-    )
-
-
 def build_ultrareal_positive_text(prompt_json: Dict[str, Any]) -> str:
     """
     UltraReal (UltraReal_FineTune_Anima_base1_v3) 拼接正面提示词。
@@ -162,36 +145,6 @@ def build_new_models_negative_text(prompt_json: Dict[str, Any]) -> str:
     return f"{base}, nsfw, explicit"
 
 
-def build_nova_negative_text(prompt_json: Dict[str, Any]) -> str:
-    """
-    Nova (novaAnimeAM v4.0) 默认负面提示词（官方推荐）。
-    根据 quality_meta_year_safe 中的安全等级追加对立约束。
-    """
-    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
-    explicit = "nsfw" in q or "explicit" in q
-    base = "worst quality, low quality, early, old, score_1, score_2, score_3, cartoon, graphic, painting, crayon, graphite, abstract, glitch, deformed, mutated, ugly, disfigured, long body, bad anatomy, bad hands, missing fingers, extra fingers, extra digits, fewer digits, cropped, very displeasing, artist name, blurry, jpeg artifacts, lowres, censor"
-    if explicit:
-        return f"{base}, safe, sensitive, mosaic"
-    return f"{base}, nsfw, explicit"
-
-
-def build_miao_negative_text(prompt_json: Dict[str, Any], turbo: bool = False) -> str:
-    """
-    Miao (MiaomiaoHarem Anima) 默认负面提示词（官方推荐）。
-    turbo=True（miao_turbo）时去掉 shiny skin（官方 turbo 版负面不含此项）。
-    根据 quality_meta_year_safe 中的安全等级追加对立约束。
-    注意：miao_turbo 官方建议 cfg 固定 1.0，此时负面提示词实际不生效。
-    """
-    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
-    explicit = "nsfw" in q or "explicit" in q
-    base = "worst quality, low quality, score_1, score_2, score_3, artist name"
-    if not turbo:
-        base += ", shiny skin"
-    if explicit:
-        return f"{base}, safe, sensitive, censored, mosaic"
-    return f"{base}, nsfw, explicit"
-
-
 def build_silvermoon_negative_text(prompt_json: Dict[str, Any]) -> str:
     """
     Silvermoon (silvermoonmixAnima_v23) 默认负面提示词。
@@ -234,28 +187,22 @@ def build_anima_positive_text(prompt_json: Dict[str, Any]) -> str:
 _V2_MODEL_PRESETS = {
     "turbo1.0": {
         "unet": TURBO10_UNET_NAME, "steps": 10, "cfg": 1.0,
-        "steps_range": (8, 12), "cfg_range": (0.7, 1.0),
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_turbo_v1_",
+    },
+    # fuse：turbo 1.1 × Anima 2.9B preview1 融合 UNET anima29b-p1-turbo1.1（turbo 权重 0.8，40 块），
+    # turbo 提示词体系 + anima29 采样组合；default_negative 常驻 → 默认按 cfg_neg 1.2 采样，
+    # 文字类负面生效以压制假签名/水印。
+    "fuse": {
+        "unet": FUSE_UNET_NAME, "steps": 8, "cfg": 1.0,
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
+        "sampler": "euler", "scheduler": "sgm_uniform", "prefix": "AnimaTool_fuse_",
+        "default_negative": FUSE_DEFAULT_NEGATIVE,
     },
     "aesthetic1.0": {
         "unet": AESTHETIC10_UNET_NAME, "steps": 35, "cfg": 4.0,
         "steps_range": None, "cfg_range": None,
         "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_aesthetic_",
-    },
-    "nova": {
-        "unet": NOVA_UNET_NAME, "steps": NOVA_STEPS, "cfg": NOVA_CFG,
-        "steps_range": (20, 30), "cfg_range": (4.0, 6.0),
-        "sampler": NOVA_SAMPLER[0], "scheduler": NOVA_SAMPLER[1], "prefix": "AnimaTool_nova_",
-    },
-    "miao": {
-        "unet": MIAO_UNET_NAME, "steps": MIAO_STEPS, "cfg": MIAO_CFG,
-        "steps_range": None, "cfg_range": (4.0, 5.0),
-        "sampler": MIAO_SAMPLER[0], "scheduler": MIAO_SAMPLER[1], "prefix": "AnimaTool_miao_",
-    },
-    "miao_turbo": {
-        "unet": MIAO_TURBO_UNET_NAME, "steps": MIAO_TURBO_STEPS, "cfg": MIAO_TURBO_CFG,
-        "steps_range": (8, 30), "cfg_range": None,
-        "sampler": MIAO_TURBO_SAMPLER[0], "scheduler": MIAO_TURBO_SAMPLER[1], "prefix": "AnimaTool_miao_turbo_",
     },
     "silvermoon": {
         "unet": SILVERMOON_UNET_NAME, "steps": SILVERMOON_STEPS, "cfg": SILVERMOON_CFG,
@@ -263,7 +210,7 @@ _V2_MODEL_PRESETS = {
         "sampler": SILVERMOON_SAMPLER[0], "scheduler": SILVERMOON_SAMPLER[1], "prefix": "AnimaTool_silvermoon_",
     },
     # Anima 2.9B：base 的层扩展微调（训练数据无 score 标签；质量前缀避免一切质量/score 词，只留 year 2026 + 安全标签）。
-    # turbo 变体通过预设 "lora" 启用 Anima-2.9B_Turbo-BF16 LoRA（cfg 固定 1，steps 8-12）。
+    # turbo 变体通过预设 "lora" 启用 Turbo-ANIMA-v2.9 LoRA（steps 8-12；turbo 系规则：cfg 1-1.6，有 neg 默认 1.2）。
     "anima29": {
         "unet": ANIMA29_UNET_NAME, "steps": ANIMA29_STEPS, "cfg": ANIMA29_CFG,
         "steps_range": (28, 50), "cfg_range": (3.5, 5.0),
@@ -271,15 +218,16 @@ _V2_MODEL_PRESETS = {
     },
     "anima29_turbo": {
         "unet": ANIMA29_UNET_NAME, "steps": ANIMA29_TURBO_STEPS, "cfg": 1.0,
-        "steps_range": (8, 12), "cfg_range": (1.0, 1.0),
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_turbo_",
         "lora": ANIMA29_TURBO_LORA_NAME, "lora_strength": 0.8,
     },
     # rdbt v2.0：base LoRA + distilled addon LoRA 双串联（lora_addon 在第一个 LoRA 之后链入）。
     # 探针结论：16 步 cfg1 双 LoRA 为 anima29 系性价比最优；仅 base（无 addon）在任何步数下均不可用。
+    # cfg 规则同 turbo 系：1.0-1.6，有 neg 默认 1.2 使负面生效，无 neg 默认 1.0。
     "anima29_rdbt": {
         "unet": ANIMA29_UNET_NAME, "steps": RDBT_STEPS, "cfg": 1.0,
-        "steps_range": (8, 32), "cfg_range": (1.0, 1.0),
+        "steps_range": (8, 32), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_rdbt_",
         "lora": RDBT_BASE_LORA_NAME, "lora_strength": 1.0,
         "lora_addon": RDBT_DISTILLED_ADDON_LORA_NAME, "lora_addon_strength": 1.0,
@@ -319,10 +267,6 @@ class AnimaExecutor:
     def __init__(self, config: Optional[AnimaToolConfig] = None):
         self.config = config or AnimaToolConfig()
         self._client_id = str(uuid.uuid4())
-
-        # kira_turbo 采样组合回落标志：res_2s+bong_tangent 失败一次后置 True，
-        # 本实例后续 turbo 任务直接走 res_multistep+simple，避免重复失败
-        self._kira_turbo_sampler_fallback = False
 
         # 远端 ComfyUI 返回的模型名称分隔符（Windows 常为 "\\"，Linux 常为 "/"）
         self._remote_model_path_sep_cache: Dict[str, str] = {}
@@ -519,96 +463,6 @@ class AnimaExecutor:
 
         wf["19"]["inputs"]["model"] = prev_model
 
-    @staticmethod
-    def _apply_perpneg_guider(wf: Dict[str, Any], seed: int, neg_scale: float) -> None:
-        """把统一模板中的 KSampler(19) 替换为 PerpNegGuider + SamplerCustomAdvanced 链路。
-
-        背景：KSampler 内部使用 CFGGuider，cfg=1.0 时负面分支数学上被抵消
-        （uncond + 1.0*(cond-uncond) == cond），ComfyUI 实际执行时也会直接跳过
-        负面计算，因此 turbo LoRA（cfg 固定 1）下负面提示词完全无效。
-        PerpNegGuider（ComfyUI 核心节点，comfy_extras/nodes_perpneg.py）用独立的
-        neg_scale 施加负面提示词相对空条件的垂直分量，cfg=1 时负面依然生效：
-        输出 = pos - neg_scale * perp(neg - empty)。turbo 画风（cfg=1 的正向轨迹）
-        保持不变，仅按 neg_scale 强度排除负面内容。
-
-        代价：每步需计算 positive + negative + empty 三次前向，单步耗时约 2-3 倍
-        （10 步 turbo 约等效 base 25-30 步开销），建议 neg_scale 1.5-3.0。
-        仅支持使用统一模板 + KSampler(19) 的工作流（_inject_v2 系列）。
-        """
-        ksampler = wf.get("19")
-        if not ksampler or "inputs" not in ksampler:
-            raise RuntimeError("unified 模板缺少 KSampler(19)，无法切换 PerpNegGuider")
-        inp = ksampler["inputs"]
-        model_src = inp["model"]
-        clip_src = wf["11"]["inputs"]["clip"]
-
-        # 空条件：perp-neg 的负面锚点（negative 相对 empty 的垂直分量才是排除方向）
-        wf["70"] = {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"clip": clip_src, "text": ""},
-        }
-        wf["71"] = {
-            "class_type": "PerpNegGuider",
-            "inputs": {
-                "model": model_src,
-                "positive": inp["positive"],
-                "negative": inp["negative"],
-                "empty_conditioning": ["70", 0],
-                "cfg": float(inp["cfg"]),
-                "neg_scale": float(neg_scale),
-            },
-        }
-        wf["72"] = {
-            "class_type": "RandomNoise",
-            "inputs": {"noise_seed": int(seed)},
-        }
-        wf["73"] = {
-            "class_type": "KSamplerSelect",
-            "inputs": {"sampler_name": inp["sampler_name"]},
-        }
-        wf["74"] = {
-            "class_type": "BasicScheduler",
-            "inputs": {
-                "model": model_src,
-                "scheduler": inp.get("scheduler", "normal"),
-                "steps": int(inp["steps"]),
-                "denoise": float(inp.get("denoise", 1.0)),
-            },
-        }
-        wf["75"] = {
-            "class_type": "SamplerCustomAdvanced",
-            "inputs": {
-                "noise": ["72", 0],
-                "guider": ["71", 0],
-                "sampler": ["73", 0],
-                "sigmas": ["74", 0],
-                "latent_image": inp["latent_image"],
-            },
-        }
-        wf["8"]["inputs"]["samples"] = ["75", 0]
-        del wf["19"]
-
-    @staticmethod
-    def _apply_nag_patch(wf: Dict[str, Any], node_class: str, inputs: Dict[str, Any]) -> None:
-        """在 KSampler(19) 的 model 链上插入 NAG 系模型补丁节点（不改采样器结构）。
-
-        NAG（Normalized Attention Guidance）在注意力输出上把正向从负向推开并归一化，
-        专为 cfg=1 的蒸馏/turbo 模型设计（此时 KSampler 的负面分支原本不生效）。
-        - node_class="NAGuidance"：ComfyUI 内核节点（patch attn1 自注意力路径）
-        - node_class="AnimaNormalizedAttentionGuidance"：ComfyUI-Anima-NAG 插件节点，
-          wrap optimized_attention，覆盖 Anima/Cosmos Predict2 的交叉注意力路径
-        """
-        if "19" not in wf or "inputs" not in wf["19"] or "model" not in wf["19"]["inputs"]:
-            raise RuntimeError("unified 模板缺少 KSampler(19)，无法插入 NAG 节点")
-        prev_model = wf["19"]["inputs"]["model"]
-        numeric_ids = [int(k) for k in wf.keys() if str(k).isdigit()]
-        node_id = str((max(numeric_ids) + 1) if numeric_ids else 1)
-        wf[node_id] = {
-            "class_type": node_class,
-            "inputs": {"model": prev_model, **inputs},
-        }
-        wf["19"]["inputs"]["model"] = [node_id, 0]
-
     # -------------------------
     # HTTP helpers (requests 优先, 无则 urllib)
     # -------------------------
@@ -667,87 +521,10 @@ class AnimaExecutor:
     # -------------------------
     # Core workflow injection
     # -------------------------
-    def _inject_turbo(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
+    def _inject_unified(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Turbo 模式：使用 anima-turbo-lora 的快速生成工作流注入。
-        cfg 固定 1，steps 固定 10，内置 turbo LoRA。
-        """
-        wf = deepcopy(self._workflow_template_turbo)
-
-        # 模型文件：turbo 默认使用 base-v1.0（LoRA 基础模型）
-        clip_name = prompt_json.get("clip_name") or self.config.clip_name
-        unet_name = prompt_json.get("unet_name") or BASE10_UNET_NAME
-        vae_name = prompt_json.get("vae_name") or self.config.vae_name
-
-        wf["45"]["inputs"]["clip_name"] = str(clip_name)
-        wf["44"]["inputs"]["unet_name"] = str(unet_name)
-        wf["15"]["inputs"]["vae_name"] = str(vae_name)
-
-        # LoRA 强度
-        lora_strength = float(prompt_json.get("lora_strength", 1.0))
-        wf["60"]["inputs"]["strength_model"] = lora_strength
-
-        # 文本
-        positive = (prompt_json.get("positive") or "").strip()
-        if not positive:
-            positive = build_turbo_positive_text(prompt_json)
-        negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
-
-        wf["11"]["inputs"]["text"] = positive
-        wf["12"]["inputs"]["text"] = negative
-
-        # 分辨率
-        width = prompt_json.get("width")
-        height = prompt_json.get("height")
-        aspect_ratio = (prompt_json.get("aspect_ratio") or "").strip()
-        round_to = int(prompt_json.get("round_to") or self.config.round_to)
-
-        if (width is None or height is None) and aspect_ratio:
-            w, h = estimate_size_from_ratio(
-                aspect_ratio=aspect_ratio,
-                target_megapixels=float(prompt_json.get("target_megapixels") or self.config.target_megapixels),
-                round_to=round_to,
-            )
-            width, height = w, h
-        elif width is not None and height is not None:
-            width = align_dimension(width, round_to)
-            height = align_dimension(height, round_to)
-
-        if width is None or height is None:
-            width, height = 1024, 1024
-
-        wf["28"]["inputs"]["width"] = int(width)
-        wf["28"]["inputs"]["height"] = int(height)
-        wf["28"]["inputs"]["batch_size"] = int(prompt_json.get("batch_size") or 1)
-
-        # 种子
-        seed = prompt_json.get("seed")
-        if seed is None:
-            seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
-        wf["19"]["inputs"]["seed"] = int(seed)
-
-        # turbo 固定参数（不允许覆盖）
-        wf["19"]["inputs"]["steps"] = 10
-        wf["19"]["inputs"]["cfg"] = 1.0
-
-        # 可覆盖的采样参数
-        if prompt_json.get("sampler_name"):
-            wf["19"]["inputs"]["sampler_name"] = str(prompt_json["sampler_name"])
-        if prompt_json.get("scheduler"):
-            wf["19"]["inputs"]["scheduler"] = str(prompt_json["scheduler"])
-        if prompt_json.get("denoise") is not None:
-            wf["19"]["inputs"]["denoise"] = float(prompt_json["denoise"])
-
-        # 文件名前缀
-        wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or wf["52"]["inputs"]["filename_prefix"])
-
-        return wf
-
-    def _inject_unified(self, prompt_json: Dict[str, Any], turbo: bool = False) -> Dict[str, Any]:
-        """
-        统一工作流注入：base 和 turbo 共用同一模板。
-        LoRA 节点始终存在，turbo 模式 strength=1.0，base 模式 strength=0。
-        模型在两种模式间保持缓存，避免重新加载。
+        base 工作流注入：统一模板，内置 LoRA 节点强度固定 0（模型保持缓存），
+        支持用户自定义 LoRA。
         """
         wf = deepcopy(self._workflow_template_unified)
 
@@ -759,22 +536,14 @@ class AnimaExecutor:
         wf["44"]["inputs"]["unet_name"] = str(unet_name)
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
-        # LoRA 强度：turbo 模式由 cfg 参数控制（默认1，范围0.7-1），base 模式固定0
-        if turbo:
-            lora_strength = float(prompt_json.get("cfg", 1.0))
-            lora_strength = max(0.7, min(1.0, lora_strength))
-        else:
-            lora_strength = 0.0
-        wf["60"]["inputs"]["strength_model"] = lora_strength
-
-        # base 模式支持用户自定义 LoRA
-        if not turbo:
-            self._inject_loras(wf, prompt_json.get("loras"))
+        # 内置 LoRA 关闭（strength=0，仅保持模型缓存）；支持用户自定义 LoRA
+        wf["60"]["inputs"]["strength_model"] = 0.0
+        self._inject_loras(wf, prompt_json.get("loras"))
 
         # 文本
         positive = (prompt_json.get("positive") or "").strip()
         if not positive:
-            positive = build_turbo_positive_text(prompt_json) if turbo else build_anima_positive_text(prompt_json)
+            positive = build_anima_positive_text(prompt_json)
         negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
 
         wf["11"]["inputs"]["text"] = positive
@@ -810,16 +579,9 @@ class AnimaExecutor:
             seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
         wf["19"]["inputs"]["seed"] = int(seed)
 
-        if turbo:
-            # turbo：steps 可调（8-12，默认10），KSampler cfg 固定1
-            steps = int(prompt_json.get("steps") or 10)
-            steps = max(8, min(12, steps))
-            wf["19"]["inputs"]["steps"] = steps
-            wf["19"]["inputs"]["cfg"] = 1.0
-        else:
-            # base 可调参数
-            wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or 35)
-            wf["19"]["inputs"]["cfg"] = float(prompt_json.get("cfg") or 4)
+        # base 可调参数
+        wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or 35)
+        wf["19"]["inputs"]["cfg"] = float(prompt_json.get("cfg") or 4)
 
         # 通用可覆盖参数
         if prompt_json.get("sampler_name"):
@@ -830,17 +592,17 @@ class AnimaExecutor:
             wf["19"]["inputs"]["denoise"] = float(prompt_json["denoise"])
 
         # 文件名前缀
-        default_prefix = "AnimaTool_" if not turbo else "AnimaTool_turbo_"
+        default_prefix = "AnimaTool_"
         wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or default_prefix)
 
         return wf
 
     def _inject_v2(self, prompt_json: Dict[str, Any], model: str) -> Dict[str, Any]:
         """
-        新模型 v1.0 统一工作流注入：turbo-v1.0、aesthetic-v1.0、nova、silvermoon、anima29 等共用同一模板。
+        新模型 v1.0 统一工作流注入：turbo-v1.0、aesthetic-v1.0、silvermoon、anima29 等共用同一模板。
         完整 UNET 的模型 LoRA 关闭；预设带 "lora" 的变体（如 anima29_turbo）启用对应 LoRA。
 
-        model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo / silvermoon / anima29 等）
+        model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / silvermoon / anima29 等）
         """
         preset = _V2_MODEL_PRESETS.get(model)
         if preset is None:
@@ -858,7 +620,7 @@ class AnimaExecutor:
         wf["44"]["inputs"]["unet_name"] = str(unet_name)
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
-        # LoRA：预设带 "lora" 时启用（如 anima29_turbo 的 Anima-2.9B_Turbo-BF16），
+        # LoRA：预设带 "lora" 时启用（如 anima29_turbo 的 Turbo-ANIMA-v2.9），
         # 其余完整 UNET 模型关闭 LoRA。可用 prompt_json 的 lora_name / lora_strength 覆盖。
         preset_lora = preset.get("lora")
         if preset_lora or prompt_json.get("lora_name"):
@@ -890,14 +652,12 @@ class AnimaExecutor:
         positive = (prompt_json.get("positive") or "").strip()
         if not positive:
             positive = build_turbo_positive_text(prompt_json)
-        negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
+        user_negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
+        negative = user_negative
         if not negative:
-            if model == "nova":
-                negative = build_nova_negative_text(prompt_json)
-            elif model == "miao":
-                negative = build_miao_negative_text(prompt_json)
-            elif model == "miao_turbo":
-                negative = build_miao_negative_text(prompt_json, turbo=True)
+            default_negative = preset.get("default_negative")
+            if default_negative:
+                negative = default_negative
             elif model == "silvermoon":
                 negative = build_silvermoon_negative_text(prompt_json)
             else:
@@ -942,7 +702,12 @@ class AnimaExecutor:
             lo, hi = preset["steps_range"]
             steps = max(lo, min(hi, steps))
         wf["19"]["inputs"]["steps"] = steps
-        cfg = float(prompt_json.get("cfg") or preset["cfg"])
+        cfg_value = prompt_json.get("cfg")
+        if cfg_value is None:
+            # 负面进采样的情况（调用方显式给 neg，或预设带 default_negative）默认用 cfg_neg；
+            # 无负面时保持预设 cfg（turbo 系为 1.0，负面惰性）。
+            cfg_value = preset.get("cfg_neg", preset["cfg"]) if (user_negative or preset.get("default_negative")) else preset["cfg"]
+        cfg = float(cfg_value)
         if preset["cfg_range"]:
             lo, hi = preset["cfg_range"]
             cfg = max(lo, min(hi, cfg))
@@ -958,125 +723,6 @@ class AnimaExecutor:
 
         # 文件名前缀
         wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or preset["prefix"])
-
-        # 可选：cfg=1 时让负面提示词生效的引导方式（三种互斥，默认全关闭）：
-        # - neg_scale>1：PerpNegGuider 替换 KSampler（负面垂直分量，见 _apply_perpneg_guider）
-        # - nag_scale>0：内核 NAGuidance 模型补丁（attn1 自注意力路径）
-        # - anima_nag_scale>0：ComfyUI-Anima-NAG 插件补丁（覆盖 Anima 交叉注意力，需已安装插件）
-        neg_scale = float(prompt_json.get("neg_scale") or 1.0)
-        nag_scale = float(prompt_json.get("nag_scale") or 0.0)
-        anima_nag_scale = float(prompt_json.get("anima_nag_scale") or 0.0)
-        active = [neg_scale > 1.0, nag_scale > 0.0, anima_nag_scale > 0.0]
-        if sum(active) > 1:
-            raise ValueError("neg_scale / nag_scale / anima_nag_scale 互斥，一次只能启用一种负面引导")
-        if neg_scale > 1.0:
-            self._apply_perpneg_guider(wf, seed=int(seed), neg_scale=neg_scale)
-        elif nag_scale > 0.0:
-            self._apply_nag_patch(wf, "NAGuidance", {
-                "nag_scale": nag_scale,
-                "nag_alpha": float(prompt_json.get("nag_alpha") or 0.5),
-                "nag_tau": float(prompt_json.get("nag_tau") or 1.5),
-            })
-        elif anima_nag_scale > 0.0:
-            self._apply_nag_patch(wf, "AnimaNormalizedAttentionGuidance", {
-                "scale": anima_nag_scale,
-                "tau": float(prompt_json.get("anima_nag_tau") or 2.5),
-                "alpha": float(prompt_json.get("anima_nag_alpha") or 0.5),
-                "start_percent": 0.0,
-                "end_percent": float(prompt_json.get("anima_nag_end_percent") or 0.5),
-                "only_anima": True,
-                "optimize_outside_range": True,
-            })
-
-        return wf
-
-    def _inject_kira(self, prompt_json: Dict[str, Any], turbo: bool = False) -> Dict[str, Any]:
-        """
-        Kira (Kirazuri Anima v4) 工作流注入。
-        turbo=True 时启用 kirazuri-anima-turbo 8-step LoRA（cfg=1, steps=8, 默认 1024x1024）。
-        """
-        wf = deepcopy(self._workflow_template_unified)
-
-        clip_name = prompt_json.get("clip_name") or self.config.clip_name
-        unet_name = prompt_json.get("unet_name") or KIRA_UNET_NAME
-        vae_name = prompt_json.get("vae_name") or self.config.vae_name
-
-        wf["45"]["inputs"]["clip_name"] = str(clip_name)
-        wf["44"]["inputs"]["unet_name"] = str(unet_name)
-        wf["15"]["inputs"]["vae_name"] = str(vae_name)
-
-        # turbo：换用 kira 8-step LoRA 并满强度；base：LoRA 关闭
-        if turbo:
-            wf["60"]["inputs"]["lora_name"] = KIRA_TURBO_LORA_NAME
-            wf["60"]["inputs"]["strength_model"] = 1.0
-        else:
-            wf["60"]["inputs"]["strength_model"] = 0.0
-
-        # 文本
-        positive = (prompt_json.get("positive") or "").strip()
-        if not positive:
-            positive = build_kira_positive_text(prompt_json)
-        negative = (prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
-        if not negative:
-            negative = build_new_models_negative_text(prompt_json)
-
-        wf["11"]["inputs"]["text"] = positive
-        wf["12"]["inputs"]["text"] = negative
-
-        # 分辨率（默认 1024x1024，与 base 一致）
-        width = prompt_json.get("width")
-        height = prompt_json.get("height")
-        aspect_ratio = (prompt_json.get("aspect_ratio") or "").strip()
-        round_to = int(prompt_json.get("round_to") or self.config.round_to)
-
-        if (width is None or height is None) and aspect_ratio:
-            w, h = estimate_size_from_ratio(
-                aspect_ratio=aspect_ratio,
-                target_megapixels=float(prompt_json.get("target_megapixels") or self.config.target_megapixels),
-                round_to=round_to,
-            )
-            width, height = w, h
-        elif width is not None and height is not None:
-            width = align_dimension(width, round_to)
-            height = align_dimension(height, round_to)
-
-        if width is None or height is None:
-            width, height = 1024, 1024
-
-        wf["28"]["inputs"]["width"] = int(width)
-        wf["28"]["inputs"]["height"] = int(height)
-        wf["28"]["inputs"]["batch_size"] = int(prompt_json.get("batch_size") or 1)
-
-        # 种子
-        seed = prompt_json.get("seed")
-        if seed is None:
-            seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
-        wf["19"]["inputs"]["seed"] = int(seed)
-
-        if turbo:
-            # 固定 8 步、cfg 1。采样组合主用 res_2s+bong_tangent（需 RES4LYF 节点，
-            # 指令遵循度实测最高）；generate_kira 在执行失败时自动回落
-            # res_multistep+simple 并置 _kira_turbo_sampler_fallback，此后直接走回落组合。
-            wf["19"]["inputs"]["steps"] = 8
-            wf["19"]["inputs"]["cfg"] = 1.0
-            sampler, scheduler = KIRA_TURBO_SAMPLER_FALLBACK if self._kira_turbo_sampler_fallback else KIRA_TURBO_SAMPLER
-            wf["19"]["inputs"]["sampler_name"] = sampler
-            wf["19"]["inputs"]["scheduler"] = scheduler
-        else:
-            # sampler 实测后定死为 er_sde（官方推荐默认，30-50 步）：单人场景与
-            # sa_solver_pece 16 步质量相当（慢 ~15%），但多人复杂场景 sa_solver_pece
-            # 会生成文字 LOGO 和手部色块异常，er_sde 两场景均干净稳定，综合选 er_sde。
-            # scheduler 用模板默认（simple）。
-            wf["19"]["inputs"]["steps"] = int(prompt_json.get("steps") or 35)
-            wf["19"]["inputs"]["cfg"] = float(prompt_json.get("cfg") or 4.5)
-            wf["19"]["inputs"]["sampler_name"] = "er_sde"
-
-        if prompt_json.get("denoise") is not None:
-            wf["19"]["inputs"]["denoise"] = float(prompt_json["denoise"])
-
-        # 文件名前缀
-        default_prefix = "AnimaTool_kira_turbo_" if turbo else "AnimaTool_kira_"
-        wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or default_prefix)
 
         return wf
 
@@ -1427,14 +1073,6 @@ class AnimaExecutor:
             time.sleep(float(self.config.poll_interval_s))
         raise TimeoutError(f"等待 ComfyUI 生成超时：prompt_id={prompt_id}, last={last}")
 
-    @staticmethod
-    def _history_failed(history_item: Dict[str, Any]) -> bool:
-        """判断 ComfyUI 历史记录是否为执行失败（报错或无图像输出）。"""
-        status = history_item.get("status") or {}
-        if str(status.get("status_str") or "").lower() == "error":
-            return True
-        return not bool(history_item.get("outputs"))
-
     def _extract_images(self, prompt_id: str, history_item: Dict[str, Any]) -> List[GeneratedImage]:
         outputs = history_item.get("outputs") or {}
         images: List[GeneratedImage] = []
@@ -1652,7 +1290,7 @@ class AnimaExecutor:
         """
         # 始终使用统一工作流（LoRA 节点始终存在，base 模式 strength=0）
         mode = "base1.0"
-        prompt = self._inject_unified(prompt_json, turbo=False)
+        prompt = self._inject_unified(prompt_json)
 
         # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
         self._maybe_clean_comfyui_output()
@@ -1720,89 +1358,12 @@ class AnimaExecutor:
 
         return result
 
-    def generate_turbo(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Turbo 快速生成：使用 anima-turbo-lora，cfg 控制 LoRA 强度，steps 8-12。
-
-        参数：
-        - quality_meta_year_safe: 安全/质量标签
-        - count: 人数（1girl/1boy 等）
-        - character: 角色名
-        - series: 作品系列
-        - appearance: 角色外观标签（逗号分隔的Danbooru标签）
-        - artist: 画师（@ 开头）
-        - tags: 通用标签（英文自然语言）
-        - cfg: LoRA 强度（0.7-1，默认1，更小=更多多样性）
-        - steps: 采样步数（8-12，默认10）
-        - aspect_ratio / width / height: 分辨率
-        - seed: 随机种子
-        """
-        prompt = self._inject_unified(prompt_json, turbo=True)
-
-        # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
-        self._maybe_clean_comfyui_output()
-        prompt_id = self.queue_prompt(prompt)
-        history_item = self.wait_history(prompt_id)
-        images = self._extract_images(prompt_id, history_item)
-        images = self._download_images(images)
-
-        images_data = []
-        for im in images:
-            mime_type = self._get_mime_type(im.filename)
-            b64 = base64.b64encode(im.content).decode("ascii") if im.content else None
-
-            img_info = {
-                "filename": im.filename,
-                "subfolder": im.subfolder,
-                "type": im.folder_type,
-                "url": im.view_url,
-                "view_url": im.view_url,
-                "file_path": im.saved_path,
-                "saved_path": im.saved_path,
-                "base64": b64,
-                "mime_type": mime_type,
-                "data_url": f"data:{mime_type};base64,{b64}" if b64 else None,
-                "markdown": f"![{im.filename}]({im.view_url})",
-            }
-            images_data.append(img_info)
-
-        actual_seed = int(prompt["19"]["inputs"]["seed"])
-        actual_positive = prompt["11"]["inputs"]["text"]
-        actual_negative = prompt["12"]["inputs"]["text"]
-        actual_width = int(prompt["28"]["inputs"]["width"])
-        actual_height = int(prompt["28"]["inputs"]["height"])
-
-        result = {
-            "success": True,
-            "mode": "turbo",
-            "prompt_id": prompt_id,
-            "positive": actual_positive,
-            "negative": actual_negative,
-            "seed": actual_seed,
-            "width": actual_width,
-            "height": actual_height,
-            "images": images_data,
-        }
-
-        record = self.history.add(
-            params=prompt_json,
-            positive_text=actual_positive,
-            negative_text=actual_negative,
-            prompt_id=prompt_id,
-            seed=actual_seed,
-            width=actual_width,
-            height=actual_height,
-        )
-        result["history_id"] = record.id
-
-        return result
-
     def generate_v2(self, prompt_json: Dict[str, Any], model: str) -> Dict[str, Any]:
         """
         新模型 v1.0 统一生成入口。
 
         参数：
-        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / nova / miao / miao_turbo / silvermoon / anima29 等）
+        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / silvermoon / anima29 等）
         - 其余字段与 turbo 模式一致，使用自然语言 tags
         """
         prompt = self._inject_v2(prompt_json, model)
@@ -1834,7 +1395,7 @@ class AnimaExecutor:
             }
             images_data.append(img_info)
 
-        # PerpNeg 模式下 KSampler(19) 已被替换删除，种子在 RandomNoise(72).noise_seed
+        # 兼容探针期 PerpNeg 工作流：KSampler(19) 被替换删除时，种子在 RandomNoise(72).noise_seed
         if "19" in prompt:
             actual_seed = int(prompt["19"]["inputs"]["seed"])
         else:
@@ -1855,99 +1416,6 @@ class AnimaExecutor:
             "height": actual_height,
             "images": images_data,
         }
-
-        record = self.history.add(
-            params=prompt_json,
-            positive_text=actual_positive,
-            negative_text=actual_negative,
-            prompt_id=prompt_id,
-            seed=actual_seed,
-            width=actual_width,
-            height=actual_height,
-        )
-        result["history_id"] = record.id
-
-        return result
-
-    def generate_kira(self, prompt_json: Dict[str, Any], turbo: bool = False) -> Dict[str, Any]:
-        """
-        Kira (Kirazuri Anima v4) 生成入口。
-
-        参数：
-        - turbo: True 时使用 kirazuri-anima-turbo 8-step LoRA（默认 1024x1024）。
-          steps=8 / cfg=1 固定写死，payload 中传入的 steps/cfg 一律忽略。
-          采样组合主用 res_2s+bong_tangent（需 RES4LYF 节点）；节点未安装或执行
-          报错（如设备不支持 fp64）时自动回落 res_multistep+simple 重试一次，
-          回落后本实例后续 turbo 任务直接使用回落组合，结果中以 sampler_fallback 标记。
-        - 其余字段与 turbo 模式一致，标签顺序见 build_kira_positive_text
-        """
-        prompt = self._inject_kira(prompt_json, turbo=turbo)
-
-        # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
-        self._maybe_clean_comfyui_output()
-
-        sampler_fallback = False
-        try:
-            prompt_id = self.queue_prompt(prompt)
-            history_item = self.wait_history(prompt_id)
-            if turbo and not self._kira_turbo_sampler_fallback and self._history_failed(history_item):
-                raise RuntimeError(f"kira_turbo 执行失败：{history_item.get('status')}")
-        except TimeoutError:
-            raise
-        except Exception:
-            if not turbo or self._kira_turbo_sampler_fallback:
-                raise
-            # res_2s+bong_tangent 不可用（RES4LYF 未安装或设备不支持 fp64）：
-            # 回落 res_multistep+simple 重试，并记住本实例后续 turbo 任务直接走回落组合
-            self._kira_turbo_sampler_fallback = True
-            sampler_fallback = True
-            prompt["19"]["inputs"]["sampler_name"], prompt["19"]["inputs"]["scheduler"] = KIRA_TURBO_SAMPLER_FALLBACK
-            prompt_id = self.queue_prompt(prompt)
-            history_item = self.wait_history(prompt_id)
-
-        images = self._extract_images(prompt_id, history_item)
-        images = self._download_images(images)
-
-        images_data = []
-        for im in images:
-            mime_type = self._get_mime_type(im.filename)
-            b64 = base64.b64encode(im.content).decode("ascii") if im.content else None
-
-            img_info = {
-                "filename": im.filename,
-                "subfolder": im.subfolder,
-                "type": im.folder_type,
-                "url": im.view_url,
-                "view_url": im.view_url,
-                "file_path": im.saved_path,
-                "saved_path": im.saved_path,
-                "base64": b64,
-                "mime_type": mime_type,
-                "data_url": f"data:{mime_type};base64,{b64}" if b64 else None,
-                "markdown": f"![{im.filename}]({im.view_url})",
-            }
-            images_data.append(img_info)
-
-        actual_seed = int(prompt["19"]["inputs"]["seed"])
-        actual_positive = prompt["11"]["inputs"]["text"]
-        actual_negative = prompt["12"]["inputs"]["text"]
-        actual_width = int(prompt["28"]["inputs"]["width"])
-        actual_height = int(prompt["28"]["inputs"]["height"])
-
-        result = {
-            "success": True,
-            "mode": "kira_turbo" if turbo else "kira",
-            "prompt_id": prompt_id,
-            "positive": actual_positive,
-            "negative": actual_negative,
-            "seed": actual_seed,
-            "width": actual_width,
-            "height": actual_height,
-            "images": images_data,
-        }
-        if turbo:
-            # res_2s+bong_tangent 不可用而自动回落 res_multistep+simple 时为 True
-            result["sampler_fallback"] = sampler_fallback or self._kira_turbo_sampler_fallback
 
         record = self.history.add(
             params=prompt_json,

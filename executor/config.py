@@ -50,15 +50,6 @@ BASE10_UNET_NAME = "anima-base-v1.0.safetensors"
 TURBO10_UNET_NAME = "anima-turbo-v1.0.safetensors"
 AESTHETIC10_UNET_NAME = "anima-aesthetic-v1.0.safetensors"
 
-# Kira (Kirazuri Anima v4) 模型文件名
-KIRA_UNET_NAME = "anima-kirazuri-v4.safetensors"
-# Kira Turbo 8-step LoRA 文件名
-KIRA_TURBO_LORA_NAME = "kirazuri-anima-turbo-v4-8step.safetensors"
-# Kira Turbo 采样组合：主用 res_2s+bong_tangent（需 RES4LYF 节点，指令遵循度实测最高）；
-# 不可用（节点未安装 / 设备不支持 fp64）时自动回落 res_multistep+simple
-KIRA_TURBO_SAMPLER = ("res_2s", "bong_tangent")
-KIRA_TURBO_SAMPLER_FALLBACK = ("res_multistep", "simple")
-
 # UltraReal (Danrisi/UltraReal_FineTune_Anima_base1_v3) 模型文件名
 # Anima base1.0 的真实系微调：@ 前缀相机/灯光标签 + 自然语言 + @年份 score_N 后缀
 ULTRAREAL_UNET_NAME = "Anima_UltraReal_finetune_v3.safetensors"
@@ -66,27 +57,6 @@ ULTRAREAL_UNET_NAME = "Anima_UltraReal_finetune_v3.safetensors"
 ULTRAREAL_SAMPLER = ("er_sde", "simple")
 ULTRAREAL_STEPS = 28
 ULTRAREAL_CFG = 4.0
-
-# Nova (novaAnimeAM v4.0) 模型文件名
-# 官方推荐：Euler a + normal，steps 20-30，CFG 4-6
-NOVA_UNET_NAME = "novaAnimeAM_v40.safetensors"
-NOVA_SAMPLER = ("euler_ancestral", "normal")
-NOVA_STEPS = 25
-NOVA_CFG = 5.0
-
-# Miao (MiaomiaoHarem Anima 1.5) 模型文件名
-# 官方推荐：Euler/Euler a + normal，steps 30，CFG 4-5
-MIAO_UNET_NAME = "miaomiaoHarem_anima15.safetensors"
-MIAO_SAMPLER = ("euler", "normal")
-MIAO_STEPS = 30
-MIAO_CFG = 4.5
-
-# Miao Turbo (MiaomiaoHarem Anima 8-step) 模型文件名
-# 官方推荐：steps 8-30（推荐 12），CFG 强烈建议固定 1.0（cfg=1 时负面不生效）
-MIAO_TURBO_UNET_NAME = "miaomiaoHarem_anima8Step10.safetensors"
-MIAO_TURBO_SAMPLER = ("euler", "normal")
-MIAO_TURBO_STEPS = 12
-MIAO_TURBO_CFG = 1.0
 
 # Silvermoon (silvermoonmixAnima_v23) 模型文件名
 # 官方推荐：Euler a + normal，CFG 4-5，steps 20-30
@@ -109,9 +79,15 @@ ANIMA29_SAMPLER = ("euler", "sgm_uniform")
 ANIMA29_STEPS = 30
 ANIMA29_CFG = 4.0
 
-# Anima 2.9B Turbo LoRA（BF16）：配合 CFG 1 + 8-12 步使用
-ANIMA29_TURBO_LORA_NAME = "Anima-2.9B_Turbo-BF16.safetensors"
+# Anima 2.9B Turbo LoRA（Turbo-ANIMA-v2.9）：配合 CFG 1 + 8-12 步使用
+ANIMA29_TURBO_LORA_NAME = "Turbo-ANIMA-v2.9.safetensors"
 ANIMA29_TURBO_STEPS = 8
+
+# Fuse：anima-turbo-v1.0（实为 turbo 1.1）与 anima29B_v10（2.9B preview1）经 AnimaModelMerge 融合
+# （turbo 权重 0.8，40 块架构），turbo 提示词体系 + anima29 采样组合；
+# cfg 1.2 使默认文字类负面生效（压制假签名/水印）
+FUSE_UNET_NAME = "anima29b-p1-turbo1.1.safetensors"
+FUSE_DEFAULT_NEGATIVE = "text, letters, sign, logo, watermark, signature, username, artist name"
 
 # rdbt v2.0 LoRA（anima2.9b p1）：base + distilled addon 双串联，CFG 1、默认 16 步。
 # 探针实测（examples/results/anima29_rdbt_probe_20260818_210509/report.md）：

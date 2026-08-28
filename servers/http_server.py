@@ -28,7 +28,7 @@ from executor import AnimaExecutor, AnimaToolConfig
 class GenerateRequest(BaseModel):
     # 允许任意字段（由 tool schema 约束；服务端只做最小校验）
     payload: Dict[str, Any] = Field(default_factory=dict)
-    # 工作流选择：base / turbo / turbo_v1 / aesthetic_v1 / kira / kira_turbo / ultrareal / nova / miao / miao_turbo / silvermoon / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed，缺省 base
+    # 工作流选择：base / turbo_v1 / fuse / aesthetic_v1 / ultrareal / silvermoon / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed，缺省 base
     workflow: Optional[str] = Field(default=None)
 
 
@@ -53,32 +53,18 @@ _SIMPLE_KNOWLEDGE = {
     "simple_examples": "simple_examples.md",
 }
 
-# turbo_v1 的专家知识（cfg=1：负面不生效，示例不含 neg）
+# turbo_v1 的专家知识
 _TURBO_V1_KNOWLEDGE = {
     "turbo_v1_expert": "turbo_v1_expert.md",
     "artist_list": "artist_list.md",
     "turbo_v1_examples": "turbo_v1_examples.md",
 }
 
-# kira 的专家知识
-_KIRA_KNOWLEDGE = {
-    "kira_expert": "kira_expert.md",
-    "artist_list": "artist_list.md",
-    "kira_examples": "kira_examples.md",
-}
-
-# kira_turbo 的专家知识（cfg=1：负面不生效；示例与 kira 共用）
-_KIRA_TURBO_KNOWLEDGE = {
-    "kira_turbo_expert": "kira_turbo_expert.md",
-    "artist_list": "artist_list.md",
-    "kira_examples": "kira_examples.md",
-}
-
 # 工作流注册表：与 ComfyUI 路由（包 __init__.py）保持一致。
 # 主 API（/schema、/knowledge、/generate）通过 workflow 参数分发，缺省 base。
 WORKFLOWS = {
     "base": {
-        "description": "Base 1.0：完整字段工作流（默认）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_universal.json",
         "knowledge": {
             "anima_expert": "anima_expert.md",
@@ -86,75 +72,34 @@ WORKFLOWS = {
             "prompt_examples": "prompt_examples.md",
         },
     },
-    "turbo": {
-        "description": "Turbo 0.2（Legacy）：base UNET + turbo LoRA 快速生成（cfg=1, steps=10）",
-        "deprecated": True,
-        "schema": "tool_schema_turbo.json",
-        "knowledge": {
-            "turbo_expert": "turbo_expert.md",
-            "artist_list": "artist_list.md",
-            "turbo_examples": "turbo_examples.md",
-        },
-    },
     "turbo_v1": {
-        "description": "Turbo 1.0：独立完整 UNET 快速生成（cfg 0.7-1, steps 8-12）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_simple_turbo.json",
         "knowledge": _TURBO_V1_KNOWLEDGE,
     },
+    "fuse": {
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
+        "schema": "tool_schema_fuse.json",
+        "knowledge": {
+            "fuse_expert": "fuse_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
     "aesthetic_v1": {
-        "description": "Aesthetic 1.0：高质量微调完整 UNET（cfg 3-8, steps 20-60）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_simple.json",
         "knowledge": _SIMPLE_KNOWLEDGE,
     },
-    "kira": {
-        "description": "Kira (Kirazuri Anima v4)：Anima 微调完整 UNET（cfg 4-5, steps 30-50, er_sde）",
-        "deprecated": True,
-        "schema": "tool_schema_simple.json",
-        "knowledge": _KIRA_KNOWLEDGE,
-    },
-    "kira_turbo": {
-        "description": "Kira Turbo：Kira + 8-step LoRA 快速生成（cfg=1, steps=8, 默认 1024x1024）",
-        "deprecated": True,
-        "schema": "tool_schema_kira_turbo.json",
-        "knowledge": _KIRA_TURBO_KNOWLEDGE,
-    },
     "ultrareal": {
-        "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3)：Anima base1.0 真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式）",
+        "description": "AnimaTool 图像生成（Anima 系写实照片风）",
         "schema": "tool_schema_ultrareal.json",
         "knowledge": {
             "ultrareal_expert": "ultrareal_expert.md",
             "ultrareal_examples": "ultrareal_examples.md",
         },
     },
-    "nova": {
-        "description": "Nova (novaAnimeAM v4.0)：完整 UNET（cfg 4-6, steps 20-30, Euler a + normal），score_N 质量前缀",
-        "deprecated": True,
-        "schema": "tool_schema_simple.json",
-        "knowledge": {
-            "nova_expert": "nova_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "miao": {
-        "description": "Miao (MiaomiaoHarem Anima 1.5)：完整 UNET（cfg 4-5, steps 30），score_N 质量前缀",
-        "deprecated": True,
-        "schema": "tool_schema_simple.json",
-        "knowledge": {
-            "miao_expert": "miao_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "miao_turbo": {
-        "description": "Miao Turbo (MiaomiaoHarem Anima 8-step)：快速 UNET（cfg=1, steps 8-30 推荐 12）",
-        "deprecated": True,
-        "schema": "tool_schema_simple_turbo.json",
-        "knowledge": {
-            "miao_turbo_expert": "miao_turbo_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
     "silvermoon": {
-        "description": "Silvermoon (silvermoonmixAnima_v23)：完整 UNET（cfg 4-5, steps 20-30 默认 20, Euler a + normal）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_silvermoon.json",
         "knowledge": {
             "silvermoon_expert": "silvermoon_expert.md",
@@ -164,7 +109,7 @@ WORKFLOWS = {
     },
     # Anima 2.9B 家族：anima29 / anima29_turbo / anima29_rdbt 各有独立 schema 与 knowledge 文件
     "anima29": {
-        "description": "Anima 2.9B v1.0：base 层扩展微调完整 UNET（cfg 3.5-5, steps 28-50 默认 30, Euler + sgm_uniform）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_anima29.json",
         "knowledge": {
             "anima29_expert": "anima29_expert.md",
@@ -172,7 +117,7 @@ WORKFLOWS = {
         },
     },
     "anima29_turbo": {
-        "description": "Anima 2.9B Turbo：Anima 2.9B + Turbo-BF16 LoRA 快速生成（cfg=1, steps 8-12 默认 8）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_anima29_turbo.json",
         "knowledge": {
             "anima29_turbo_expert": "anima29_turbo_expert.md",
@@ -180,7 +125,7 @@ WORKFLOWS = {
         },
     },
     "anima29_rdbt": {
-        "description": "Anima 2.9B + rdbt v2.0 双 LoRA（base→distilled addon，cfg=1, steps 默认 16）：实测 16 步追平/反超 anima29 30 步，anima29 系性价比最优",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_anima29_rdbt.json",
         "knowledge": {
             "anima29_rdbt_expert": "anima29_rdbt_expert.md",
@@ -188,7 +133,7 @@ WORKFLOWS = {
         },
     },
     "aura": {
-        "description": "AuraAnima 2.9B Int8 量化·精度重视（er_sde+beta, steps 默认 12, cfg 4-5 默认 5）：质量/速度与 BF16 anima29 同档且显存约减半；风格标签默认 photo real，可选 anime color / real skin",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_aura.json",
         "knowledge": {
             "aura_expert": "aura_expert.md",
@@ -196,7 +141,7 @@ WORKFLOWS = {
         },
     },
     "aura-speed": {
-        "description": "AuraAnima 2.9B Int8 量化·速度重视（euler+simple, steps 默认 10, cfg 4-5 默认 5）：批量/迭代/简单场景/复杂构图用；风格标签默认 photo real，可选 anime color / real skin",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_aura_speed.json",
         "knowledge": {
             "aura_speed_expert": "aura_speed_expert.md",
@@ -224,24 +169,14 @@ def create_app() -> FastAPI:
         return wf
 
     def _generate_dispatch(workflow: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        if workflow == "turbo":
-            return executor.generate_turbo(payload)
         if workflow == "turbo_v1":
             return executor.generate_v2(payload, "turbo1.0")
+        if workflow == "fuse":
+            return executor.generate_v2(payload, "fuse")
         if workflow == "aesthetic_v1":
             return executor.generate_v2(payload, "aesthetic1.0")
-        if workflow == "kira":
-            return executor.generate_kira(payload)
-        if workflow == "kira_turbo":
-            return executor.generate_kira(payload, turbo=True)
         if workflow == "ultrareal":
             return executor.generate_ultrareal(payload)
-        if workflow == "nova":
-            return executor.generate_v2(payload, "nova")
-        if workflow == "miao":
-            return executor.generate_v2(payload, "miao")
-        if workflow == "miao_turbo":
-            return executor.generate_v2(payload, "miao_turbo")
         if workflow == "silvermoon":
             return executor.generate_v2(payload, "silvermoon")
         if workflow == "anima29":

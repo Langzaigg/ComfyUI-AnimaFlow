@@ -8,9 +8,6 @@ ComfyUI-AnimaTool：随 ComfyUI 启动的 Anima Tool Use API
   POST /anima/generate         - 执行生成（body/query 中 workflow 选择工作流，缺省 base）
 
 兼容性接口（保持不变，等价于 workflow 参数的固定写法）：
-  POST /anima/generate_turbo   - Turbo 0.2 快速生成（cfg=1, steps=10, 内置 turbo LoRA）
-  GET  /anima/schema_turbo     - 返回 Turbo 0.2 Tool Schema
-  GET  /anima/knowledge_turbo  - 返回 Turbo 0.2 专家知识
   POST /anima/generate_turbo_v1 - Anima Turbo v1.0 生成
   POST /anima/generate_aesthetic_v1 - Anima Aesthetic v1.0 生成
   GET  /anima/schema_turbo_v1  - 返回 Turbo v1.0 Schema
@@ -54,25 +51,11 @@ _SIMPLE_KNOWLEDGE = {
     "simple_examples": "simple_examples.md",
 }
 
-# turbo_v1 的专家知识（cfg=1：负面不生效，示例不含 neg）
+# turbo_v1 的专家知识
 _TURBO_V1_KNOWLEDGE = {
     "turbo_v1_expert": "turbo_v1_expert.md",
     "artist_list": "artist_list.md",
     "turbo_v1_examples": "turbo_v1_examples.md",
-}
-
-# kira 的专家知识
-_KIRA_KNOWLEDGE = {
-    "kira_expert": "kira_expert.md",
-    "artist_list": "artist_list.md",
-    "kira_examples": "kira_examples.md",
-}
-
-# kira_turbo 的专家知识（cfg=1：负面不生效；示例与 kira 共用）
-_KIRA_TURBO_KNOWLEDGE = {
-    "kira_turbo_expert": "kira_turbo_expert.md",
-    "artist_list": "artist_list.md",
-    "kira_examples": "kira_examples.md",
 }
 
 # 工作流注册表：主 API 通过 workflow 参数分发，缺省为 base。
@@ -81,7 +64,7 @@ _KIRA_TURBO_KNOWLEDGE = {
 # 不在共享文件的描述里为某个工作流写条件特例。
 WORKFLOWS = {
     "base": {
-        "description": "Base 1.0：完整字段工作流（默认）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_universal.json",
         "knowledge": {
             "anima_expert": "anima_expert.md",
@@ -89,75 +72,34 @@ WORKFLOWS = {
             "prompt_examples": "prompt_examples.md",
         },
     },
-    "turbo": {
-        "description": "Turbo 0.2（Legacy）：base UNET + turbo LoRA 快速生成（cfg=1, steps=10）",
-        "deprecated": True,
-        "schema": "tool_schema_turbo.json",
-        "knowledge": {
-            "turbo_expert": "turbo_expert.md",
-            "artist_list": "artist_list.md",
-            "turbo_examples": "turbo_examples.md",
-        },
-    },
     "turbo_v1": {
-        "description": "Turbo 1.0：独立完整 UNET 快速生成（cfg 0.7-1, steps 8-12）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_simple_turbo.json",
         "knowledge": _TURBO_V1_KNOWLEDGE,
     },
+    "fuse": {
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
+        "schema": "tool_schema_fuse.json",
+        "knowledge": {
+            "fuse_expert": "fuse_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
     "aesthetic_v1": {
-        "description": "Aesthetic 1.0：高质量微调完整 UNET（cfg 3-8, steps 20-60）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_simple.json",
         "knowledge": _SIMPLE_KNOWLEDGE,
     },
-    "kira": {
-        "description": "Kira (Kirazuri Anima v4)：Anima 微调完整 UNET（cfg 4-5, steps 30-50, er_sde）",
-        "deprecated": True,
-        "schema": "tool_schema_simple.json",
-        "knowledge": _KIRA_KNOWLEDGE,
-    },
-    "kira_turbo": {
-        "description": "Kira Turbo：Kira + 8-step LoRA 快速生成（cfg=1, steps=8, 默认 1024x1024）",
-        "deprecated": True,
-        "schema": "tool_schema_kira_turbo.json",
-        "knowledge": _KIRA_TURBO_KNOWLEDGE,
-    },
     "ultrareal": {
-        "description": "UltraReal (UltraReal_FineTune_Anima_base1_v3)：Anima base1.0 真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式）",
+        "description": "AnimaTool 图像生成（Anima 系写实照片风）",
         "schema": "tool_schema_ultrareal.json",
         "knowledge": {
             "ultrareal_expert": "ultrareal_expert.md",
             "ultrareal_examples": "ultrareal_examples.md",
         },
     },
-    "nova": {
-        "description": "Nova (novaAnimeAM v4.0)：完整 UNET（cfg 4-6, steps 20-30, Euler a + normal），score_N 质量前缀",
-        "deprecated": True,
-        "schema": "tool_schema_simple.json",
-        "knowledge": {
-            "nova_expert": "nova_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "miao": {
-        "description": "Miao (MiaomiaoHarem Anima 1.5)：完整 UNET（cfg 4-5, steps 30），score_N 质量前缀",
-        "deprecated": True,
-        "schema": "tool_schema_simple.json",
-        "knowledge": {
-            "miao_expert": "miao_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "miao_turbo": {
-        "description": "Miao Turbo (MiaomiaoHarem Anima 8-step)：快速 UNET（cfg=1, steps 8-30 推荐 12）",
-        "deprecated": True,
-        "schema": "tool_schema_simple_turbo.json",
-        "knowledge": {
-            "miao_turbo_expert": "miao_turbo_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
     "silvermoon": {
-        "description": "Silvermoon (silvermoonmixAnima_v23)：完整 UNET（cfg 4-5, steps 20-30 默认 20, Euler a + normal）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_silvermoon.json",
         "knowledge": {
             "silvermoon_expert": "silvermoon_expert.md",
@@ -166,7 +108,7 @@ WORKFLOWS = {
         },
     },
     "anima29": {
-        "description": "Anima 2.9B v1.0：base 层扩展微调完整 UNET（cfg 3.5-5, steps 28-50 默认 30, Euler + sgm_uniform）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_anima29.json",
         "knowledge": {
             "anima29_expert": "anima29_expert.md",
@@ -174,7 +116,7 @@ WORKFLOWS = {
         },
     },
     "anima29_turbo": {
-        "description": "Anima 2.9B Turbo：Anima 2.9B + Turbo-BF16 LoRA 快速生成（cfg=1, steps 8-12 默认 8）",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_anima29_turbo.json",
         "knowledge": {
             "anima29_turbo_expert": "anima29_turbo_expert.md",
@@ -182,7 +124,7 @@ WORKFLOWS = {
         },
     },
     "anima29_rdbt": {
-        "description": "Anima 2.9B + rdbt v2.0 双 LoRA（base→distilled addon，cfg=1, steps 默认 16）：实测 16 步追平/反超 anima29 30 步，anima29 系性价比最优",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_anima29_rdbt.json",
         "knowledge": {
             "anima29_rdbt_expert": "anima29_rdbt_expert.md",
@@ -190,7 +132,7 @@ WORKFLOWS = {
         },
     },
     "aura": {
-        "description": "AuraAnima 2.9B Int8 量化·精度重视（er_sde+beta, steps 默认 12, cfg 4-5 默认 5）：质量/速度与 BF16 anima29 同档且显存约减半；风格标签默认 photo real，可选 anime color / real skin",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_aura.json",
         "knowledge": {
             "aura_expert": "aura_expert.md",
@@ -198,7 +140,7 @@ WORKFLOWS = {
         },
     },
     "aura-speed": {
-        "description": "AuraAnima 2.9B Int8 量化·速度重视（euler+simple, steps 默认 10, cfg 4-5 默认 5）：批量/迭代/简单场景/复杂构图用；风格标签默认 photo real，可选 anime color / real skin",
+        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_aura_speed.json",
         "knowledge": {
             "aura_speed_expert": "aura_speed_expert.md",
@@ -226,24 +168,14 @@ def _knowledge_response(workflow: str) -> web.Response:
 
 
 def _generate_dispatch(executor: AnimaExecutor, workflow: str, payload: dict):
-    if workflow == "turbo":
-        return executor.generate_turbo(payload)
     if workflow == "turbo_v1":
         return executor.generate_v2(payload, "turbo1.0")
+    if workflow == "fuse":
+        return executor.generate_v2(payload, "fuse")
     if workflow == "aesthetic_v1":
         return executor.generate_v2(payload, "aesthetic1.0")
-    if workflow == "kira":
-        return executor.generate_kira(payload)
-    if workflow == "kira_turbo":
-        return executor.generate_kira(payload, turbo=True)
     if workflow == "ultrareal":
         return executor.generate_ultrareal(payload)
-    if workflow == "nova":
-        return executor.generate_v2(payload, "nova")
-    if workflow == "miao":
-        return executor.generate_v2(payload, "miao")
-    if workflow == "miao_turbo":
-        return executor.generate_v2(payload, "miao_turbo")
     if workflow == "silvermoon":
         return executor.generate_v2(payload, "silvermoon")
     if workflow == "anima29":
@@ -370,33 +302,6 @@ def _setup_routes():
     # -------------------------
     # 兼容性接口：等价于 workflow 参数的固定写法，保持不变
     # -------------------------
-    @routes.get("/anima/schema_turbo")
-    async def anima_schema_turbo(request):
-        return _schema_response("turbo")
-
-    @routes.get("/anima/knowledge_turbo")
-    async def anima_knowledge_turbo(request):
-        return _knowledge_response("turbo")
-
-    @routes.post("/anima/generate_turbo")
-    async def anima_generate_turbo(request):
-        try:
-            body = await request.json()
-        except Exception as e:
-            return web.json_response({"error": f"JSON parse error: {e}"}, status=400)
-
-        if "payload" in body and isinstance(body["payload"], dict):
-            payload = body["payload"]
-        else:
-            payload = body
-
-        try:
-            result = await asyncio.to_thread(executor.generate_turbo, payload)
-        except Exception as e:
-            return web.json_response({"error": str(e)}, status=500)
-
-        return web.json_response(result)
-
     @routes.post("/anima/generate_turbo_v1")
     async def anima_generate_turbo_v1(request):
         try:
@@ -447,7 +352,7 @@ def _setup_routes():
     async def anima_knowledge_new_models(request):
         return _knowledge_response("turbo_v1")
 
-    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/schema_turbo, /anima/knowledge_turbo, /anima/generate_turbo, /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口)")
+    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口)")
 
 
 # ComfyUI 加载 custom_nodes 时会 import 这个模块

@@ -1,6 +1,6 @@
 {
   "name": "generate_anima",
-  "description": "生成接口（Anima 2.9B + Turbo LoRA，cfg=1 快速生成）。使用简化字段生成二次元插画；提示词越详细越好，规则见对应 knowledge。",
+  "description": "AnimaTool 图像生成接口（Anima 系二次元插画模型，turbo 快速档）。使用结构化字段与自然语言描述画面；字段与提示词规则见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {
@@ -40,36 +40,16 @@
       },
       "neg": {
         "type": "string",
-        "description": "不要填写：cfg=1 时负面提示词不进采样、不生效。不想要的元素用正向写法规避（不要提及，用正向描述替代，如要干净背景就写 'simple background'）；仅 nsfw/explicit 分级时在 tags 末尾保留无码提示词 'no mosaic, uncensored'。",
+        "description": "一般留空（默认 cfg 1.0，负面不进采样）。首选用正向写法规避：不想要的元素不要提及，用正向描述替代（如要干净背景就写 'simple background'）。正向写法管不住的元素（如假签名、水印、logo 类伪影）填写在此，填写后默认以 cfg 1.2 使负面生效。",
         "default": ""
       },
       "cfg": {
         "type": "number",
-        "description": "CFG 引导强度。缺省使用该工作流的官方推荐值。"
+        "description": "CFG 引导强度（1.0-1.6）。缺省：填写 neg 时 1.2，留空时 1.0。"
       },
-      "neg_scale": {
-        "type": "number",
-        "description": "实验性（不推荐日常使用）：负面引导强度（PerpNegGuider），仅在 >1 时启用，强制负面生效。实测仅对 blush 类简单属性词偶有压制，对 text/sign 等场景级概念无效，且会改变构图、可能引入反义元素、单步耗时约 2-3 倍。默认应保持关闭、用正向写法规避。与 nag_scale / anima_nag_scale 互斥。",
-        "default": 1.0
-      },
-      "nag_scale": {
-        "type": "number",
-        "description": "实验性（不推荐）：内核 NAGuidance 强度（>0 启用）。两轮实测均无压制效果，仅保留用于后续模型复测；可配 nag_alpha（默认 0.5）/ nag_tau（默认 1.5）。与 neg_scale / anima_nag_scale 互斥。",
-        "default": 0
-      },
-      "anima_nag_scale": {
-        "type": "number",
-        "description": "实验性（不推荐）：Anima 专用 NAG 强度（>0 启用，需 ComfyUI 已装 ComfyUI-Anima-NAG 插件）。实测仅个别属性部分生效、不稳定，仅保留用于后续模型复测；可配 anima_nag_tau（默认 2.5）/ anima_nag_alpha（默认 0.5）/ anima_nag_end_percent（默认 0.5）。与 neg_scale / nag_scale 互斥。",
-        "default": 0
-      },
-      "nag_alpha": {"type": "number", "description": "内核 NAG 混合系数，默认 0.5。"},
-      "nag_tau": {"type": "number", "description": "内核 NAG 归一化阈值，默认 1.5。"},
-      "anima_nag_tau": {"type": "number", "description": "Anima NAG 归一化阈值，默认 2.5。"},
-      "anima_nag_alpha": {"type": "number", "description": "Anima NAG 混合系数，默认 0.5。"},
-      "anima_nag_end_percent": {"type": "number", "description": "Anima NAG 生效的采样进度上限（0-1），默认 0.5。"},
       "steps": {
         "type": "integer",
-        "description": "采样步数。缺省使用该工作流的官方推荐值。"
+        "description": "采样步数（8-12）。缺省使用该工作流的官方推荐值。"
       },
       "aspect_ratio": {
         "type": "string",

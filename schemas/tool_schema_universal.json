@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_image",
-  "description": "使用 Anima（circlestone-labs/Anima）在本地 ComfyUI 生成二次元/插画向图片。调用方应先按 Anima 规范生成结构化字段（顺序：[质量/元数据/年份/安全] [人数] [角色] [作品] [画师] [风格] [外观] [标签] [环境] [自然语言]；自然语言(nltags)建议放最后），并保证安全标签明确（safe/sensitive/nsfw/explicit）。tags 只写真实存在的标准 Danbooru 标签，没有特别符合的 tag 时在 nltags 用自然语言描述，不要编造不标准 tag。多角色时：appearance 必须留空，tags 禁止包含任何角色外貌信息，角色名统一写在 character 中，每个角色的外观在 nltags 中逐角色分别描述。",
+  "description": "AnimaTool 图像生成接口（Anima 系二次元插画模型）。使用结构化字段与自然语言描述画面；字段与提示词规则见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {

@@ -32,6 +32,24 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP | ~1.2GB |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE | ~330MB |
 
+### 按工作流选用的附加模型
+
+| 文件 | 路径 | 用于工作流 |
+|------|------|-----------|
+| `anima-base-v1.0.safetensors` | `models/diffusion_models/` | base |
+| `anima29B_v10.safetensors` | `models/diffusion_models/` | anima29 系 / aura 系底座 |
+| `anima-turbo-v1.0.safetensors`（实为 turbo 1.1） | `models/diffusion_models/` | turbo_v1 |
+| `anima-aesthetic-v1.0.safetensors` | `models/diffusion_models/` | aesthetic_v1 |
+| `anima29b-p1-turbo1.1.safetensors` | `models/diffusion_models/` | fuse（融合 UNET，非官方拼接衍生） |
+| `Turbo-ANIMA-v2.9.safetensors` | `models/loras/` | anima29_turbo（强度 0.8） |
+| `anima29b-turbo-v2.9-remap.safetensors` | `models/loras/` | anima29_turbo 的重映射 LoRA 替代（免补丁） |
+| `rdbt_v2.0_base_anima2.9b_p1_lora.safetensors` + `rdbt_v2.0_distilled_addon_anima2.9b_p1_lora.safetensors` | `models/loras/` | anima29_rdbt（双 LoRA 串联） |
+| `auranima29B_qpolaP101Int8W8a8.safetensors` | `models/diffusion_models/` | aura / aura-speed（Int8 量化） |
+| `Anima_UltraReal_finetune_v3.safetensors` | `models/diffusion_models/` | ultrareal |
+| `silvermoonmixAnima_v23.safetensors` | `models/diffusion_models/` | silvermoon |
+
+> **anima29_turbo 的 LoRA 注意**：Anima 2.9B 是 base 的 28→40 块深度扩展，28 块布局的原版 `Turbo-ANIMA-v2.9.safetensors` 需安装 `ComfyUI-Anima-2.9B-loraPatch` 自定义节点做运行时索引修正；或改用离线重映射版 `anima29b-turbo-v2.9-remap.safetensors`（免补丁，payload 传 `lora_name` 覆盖，与原版+补丁同 seed 逐像素等价）。
+
 ### 下载方式
 
 **方式 1：Hugging Face**
@@ -54,7 +72,7 @@ huggingface-cli download circlestone-labs/Anima anima-preview.safetensors --loca
 2. 查看控制台，应该看到：
 
 ```
-[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/schema, /anima/knowledge, /anima/generate
+[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口)
 ```
 
 3. 访问 `http://127.0.0.1:8188/anima/health`，应该返回：
@@ -72,10 +90,6 @@ pip install mcp
 ```
 
 详细配置见 [MCP Server 配置](MCP-Setup)。
-
-## kira_turbo 工作流额外依赖（可选）
-
-`kira_turbo` 工作流的主用采样组合为 `res_2s` + `bong_tangent`（官方推荐，指令遵循度实测最高），来自 **RES4LYF** 自定义节点。未安装 RES4LYF、或设备执行该组合报错（如 fp64 不支持）时无需处理——接口会自动回落到 ComfyUI 内置的 `res_multistep` + `simple` 完成生成（返回结果带 `sampler_fallback: true` 标记），但指令遵循度略逊于主组合。其余工作流（含 `kira`）无此依赖。
 
 ## 故障排除
 

@@ -1,6 +1,19 @@
 # 迁移参考：AnimaFlow 2026-08 变更
 
-本文档汇总两轮变更：2026-08-18 版本（Anima 2.9B、弃用标记与发现 API，见第 0 节）与此前一轮变更（主 API 统一化、提示词策略调整、Kira 工作流新增、项目重命名，见第 1-6 节），供从旧版 AnimaTool 迁移时参考。
+本文档汇总三轮变更：2026-08-28 版本（废弃工作流彻底移除，见下节）、2026-08-18 版本（Anima 2.9B、弃用标记与发现 API，见第 0 节）与此前一轮变更（主 API 统一化、提示词策略调整、Kira 工作流新增、项目重命名，见第 1-6 节），供从旧版 AnimaTool 迁移时参考。
+
+## 2026-08-28 版本：废弃工作流彻底移除
+
+2026-08-18 标记 `deprecated` 的 6 个工作流本轮**彻底移除**（不再是"仍可调通"）：
+
+| 移除项 | 内容 |
+|---|---|
+| 工作流 | `turbo`(0.2) / `kira` / `kira_turbo` / `nova` / `miao` / `miao_turbo`——从 WORKFLOWS 注册表、generate 分发与 `_V2_MODEL_PRESETS` 删除，调用会收到 400 未知 workflow |
+| 兼容端点 | `POST /anima/generate_turbo`、`GET /anima/schema_turbo`、`GET /anima/knowledge_turbo`（Turbo 0.2 专属）一并移除；turbo_v1 / aesthetic_v1 的兼容端点保留不变 |
+| 资源文件 | `tool_schema_turbo.json` / `tool_schema_kira_turbo.json` / `tool_schema_miao_turbo.json` 与 turbo/kira/nova/miao 各 expert/examples 知识文件删除 |
+| executor | `generate_turbo` / `generate_kira` / `_inject_kira` / `_inject_turbo`（死代码）/ `_history_failed` 删除；`_inject_unified` 收回为纯 base 注入；`KIRA_*` / `NOVA_*` / `MIAO_*` 常量删除 |
+
+迁移建议：`turbo`(0.2) → `turbo_v1` 或 `anima29_turbo`；`kira` / `nova` / `miao` → `anima29` / `silvermoon` / `aura`；`kira_turbo` / `miao_turbo` → `anima29_turbo` / `fuse`。下游若按下文 2026-08-18 版本「工作流发现 API」一节的接入约定实现（不硬编码工作流清单），本次移除零适配——`/workflows` 返回集自动收缩。
 
 ---
 

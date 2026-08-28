@@ -2,7 +2,7 @@
 
 `tags` 固定使用英文自然语言完整句子。多角色时 `appearance` 留空、`tags` 不含角色外貌信息，外观在自然语言中逐角色分别描述。
 
-cfg=1 下不需要 `neg` 字段；explicit 分级在 `tags` 末尾加 `no mosaic, uncensored`。
+`neg` 一般留空（默认 cfg 1.0）；需要排除特定元素时填写，填写后默认以 cfg 1.2 使负面生效。
 
 ## 1) 单角色竖构图
 
@@ -41,6 +41,6 @@ cfg=1 下不需要 `neg` 字段；explicit 分级在 `tags` 末尾加 `no mosaic
   "count": "2girls",
   "appearance": "",
   "artist": "@makihitsuji",
-  "tags": "Two girls stand side by side in an ancient forest clearing, shown full body. The beastgirl warrior with short crimson red hair, amber eyes and wolf ears wears dark leather armor with fur trim and heavy boots, wielding a battle axe with a fierce grin. The elven mage with long silver-white hair, emerald green eyes and pointed ears wears a blue and white robe with glowing runes, holding a crystal staff with a serene smile. Dappled sunlight filters through the canopy with floating golden particles. no mosaic, uncensored"
+  "tags": "Two girls stand side by side in an ancient forest clearing, shown full body. The beastgirl warrior with short crimson red hair, amber eyes and wolf ears wears dark leather armor with fur trim and heavy boots, wielding a battle axe with a fierce grin. The elven mage with long silver-white hair, emerald green eyes and pointed ears wears a blue and white robe with glowing runes, holding a crystal staff with a serene smile. Dappled sunlight filters through the canopy with floating golden particles."
 }
 ```

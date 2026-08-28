@@ -1,6 +1,6 @@
 {
   "name": "generate_anima",
-  "description": "生成接口（AuraAnima 2.9B Int8 量化，精度重视 er_sde+beta 12 步）。使用简化字段生成插画；提示词越详细越好，规则见对应 knowledge。",
+  "description": "AnimaTool 图像生成接口（Anima 系二次元插画模型）。使用结构化字段与自然语言描述画面；字段与提示词规则见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {

@@ -1,6 +1,6 @@
 {
   "name": "generate_anima_silvermoon",
-  "description": "Silvermoon (silvermoonmixAnima_v23) 生成接口。Euler a + normal，CFG 4-5，steps 20-30。",
+  "description": "AnimaTool 图像生成接口（Anima 系二次元插画模型）。使用结构化字段与自然语言描述画面；字段与提示词规则见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {
