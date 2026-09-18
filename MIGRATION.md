@@ -1,6 +1,21 @@
 # 迁移参考：AnimaFlow 2026-08 变更
 
-本文档汇总三轮变更：2026-08-28 版本（废弃工作流彻底移除，见下节）、2026-08-18 版本（Anima 2.9B、弃用标记与发现 API，见第 0 节）与此前一轮变更（主 API 统一化、提示词策略调整、Kira 工作流新增、项目重命名，见第 1-6 节），供从旧版 AnimaTool 迁移时参考。
+本文档汇总历轮变更：2026-09-18 版本（fuse 1.1 / Turbo LoRA 1.1 转正，见下节）、2026-08-28 版本（废弃工作流彻底移除）、2026-08-18 版本（Anima 2.9B、弃用标记与发现 API，见第 0 节）与此前一轮变更（主 API 统一化、提示词策略调整、Kira 工作流新增、项目重命名，见第 1-6 节），供从旧版 AnimaTool 迁移时参考。
+
+## 2026-09-18 版本：fuse 1.1 与 Turbo LoRA 1.1 转正
+
+| 项 | 内容 |
+|---|---|
+| `fuse` 升级为 v1.1 | 融合 UNET 换为 `anima29b-sm29t-fuse1.1.safetensors`（[SilvermoonMix Anima Evolved](https://civitai.com/models/2639339/silvermoonmix-anima-evolved) v2329B Turbo × anima-turbo-v1.1 按 0.3/0.7 加权融合，非官方衍生）；采样改为 **10 步、cfg 固定 1.0、Euler a + normal、无负面**（旧的内置文字类负面 + cfg 1.2 规则取消）。调用方不需要改字段，`neg` 字段不再生效（惰性） |
+| `fuse1.0`（已过期） | 旧 fuse（`anima29b-p1-turbo1.1.safetensors`，8 步 euler+sgm_uniform，内置文字类负面 cfg 1.2）整体平移为 `fuse1.0` 工作流并标记 `deprecated: true`——仍可调通，新流程请用 `fuse` |
+| `anima29_turbo` LoRA 更换 | 默认 Turbo LoRA 换为 `anima29b-turbolora1.1.safetensors`（[Turbo-ANIMA](https://civitai.com/models/2619830/turbo-for-anima-less-steps) v4 的 2.9B 免补丁重映射版，非官方衍生），强度 0.8 与采样参数不变；不再需要 `ComfyUI-Anima-2.9B-loraPatch` 运行时补丁 |
+| `silvermoon` 升级 | 模型换为 `silvermoonmixAnima_v2329B.safetensors`：24 步（20-28）、cfg 4.5（4-5）、Euler a + normal、**默认无负面**；画师 tag 必须带 `@` 前缀 |
+| turbo/aesthetic 路径 | `anima-turbo-v1.1.safetensors` / `anima-aesthetic-v1.1.safetensors`（文件名数字更新） |
+| 模型下载 | v1.1 融合 UNET 与 Turbo LoRA 发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（CircleStone 非商业许可）；v1.0 旧产物仍在 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial) |
+
+迁移建议：按第 0.3 节约定接入的下游零适配（`fuse` 仍在原位、参数自动生效，`fuse1.0` 带 deprecated 标记自动过滤）；硬编码了 fuse 采样参数或内置负面假设的调用方需按上表更新。模型文件需手动下载更名到对应目录。
+
+---
 
 ## 2026-08-28 版本：废弃工作流彻底移除
 

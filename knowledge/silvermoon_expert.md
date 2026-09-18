@@ -1,4 +1,4 @@
-# Silvermoon (silvermoonmixAnima_v23) 提示词规范
+# Silvermoon (silvermoonmixAnima_v2329B) 提示词规范
 
 ## 核心规则
 
@@ -8,12 +8,12 @@
 4. `quality_meta_year_safe` 必须明确安全等级 `safe/sensitive/nsfw/explicit`。
 5. `artist` 必须以 `@` 开头，无明确需求时留空。
 6. 默认非写实，二次元插画风格。
-7. `neg` 留空即可，后端自动使用默认负面；若手动填写则覆盖。
+7. `neg` 留空即可（官方建议从无负面开始）；若手动填写则生效。
 
 ## 参数
 
 - `cfg`: CFG 引导强度 4-5，默认 4.5
-- `steps`: 采样步数 20-30，默认 20
+- `steps`: 采样步数 20-28，默认 24
 - `sampler_name`: 默认 `euler_ancestral`（Euler a）
 - `scheduler`: 默认 `normal`
 
@@ -41,13 +41,7 @@
 
 ## 负面提示词
 
-`neg` 留空时后端自动使用默认负面：
-
-```
-text, letters, sign, logo, watermark, signature, ui, interface
-```
-
-nsfw/explicit 分级时自动追加 `mosaic, censored`。
+官方建议从无负面开始（示例图均无负面生成）。`neg` 留空即不使用负面；若手动填写则生效。
 
 ## 模型限制
 

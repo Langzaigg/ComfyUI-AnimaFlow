@@ -38,17 +38,17 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 |------|------|-----------|
 | `anima-base-v1.0.safetensors` | `models/diffusion_models/` | base |
 | `anima29B_v10.safetensors` | `models/diffusion_models/` | anima29 系 / aura 系底座 |
-| `anima-turbo-v1.0.safetensors`（实为 turbo 1.1） | `models/diffusion_models/` | turbo_v1 |
-| `anima-aesthetic-v1.0.safetensors` | `models/diffusion_models/` | aesthetic_v1 |
-| `anima29b-p1-turbo1.1.safetensors` | `models/diffusion_models/` | fuse（融合 UNET，非官方拼接衍生） |
-| `Turbo-ANIMA-v2.9.safetensors` | `models/loras/` | anima29_turbo（强度 0.8） |
-| `anima29b-turbo-v2.9-remap.safetensors` | `models/loras/` | anima29_turbo 的重映射 LoRA 替代（免补丁） |
+| `anima-turbo-v1.1.safetensors` | `models/diffusion_models/` | turbo_v1 |
+| `anima-aesthetic-v1.1.safetensors` | `models/diffusion_models/` | aesthetic_v1 |
+| `anima29b-sm29t-fuse1.1.safetensors` | `models/diffusion_models/` | fuse（融合 UNET v1.1，非官方融合衍生） |
+| `anima29b-p1-turbo1.1.safetensors` | `models/diffusion_models/` | fuse1.0（已过期，融合 UNET v1.0） |
+| `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo（强度 0.8，免补丁重映射版） |
 | `rdbt_v2.0_base_anima2.9b_p1_lora.safetensors` + `rdbt_v2.0_distilled_addon_anima2.9b_p1_lora.safetensors` | `models/loras/` | anima29_rdbt（双 LoRA 串联） |
 | `auranima29B_qpolaP101Int8W8a8.safetensors` | `models/diffusion_models/` | aura / aura-speed（Int8 量化） |
 | `Anima_UltraReal_finetune_v3.safetensors` | `models/diffusion_models/` | ultrareal |
-| `silvermoonmixAnima_v23.safetensors` | `models/diffusion_models/` | silvermoon |
+| `silvermoonmixAnima_v2329B.safetensors` | `models/diffusion_models/` | silvermoon |
 
-> **anima29_turbo 的 LoRA 注意**：Anima 2.9B 是 base 的 28→40 块深度扩展，28 块布局的原版 `Turbo-ANIMA-v2.9.safetensors` 需安装 `ComfyUI-Anima-2.9B-loraPatch` 自定义节点做运行时索引修正；或改用离线重映射版 `anima29b-turbo-v2.9-remap.safetensors`（免补丁，payload 传 `lora_name` 覆盖，与原版+补丁同 seed 逐像素等价）。
+> **非官方衍生模型下载**：fuse 融合 UNET 与 Turbo LoRA 重映射版（v1.1）发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)；原始出处为 [SilvermoonMix Anima Evolved](https://civitai.com/models/2639339/silvermoonmix-anima-evolved) 与 [Turbo-ANIMA](https://civitai.com/models/2619830/turbo-for-anima-less-steps)，CircleStone 非商业许可。旧版 v1.0（已过期）在 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)。
 
 ### 下载方式
 

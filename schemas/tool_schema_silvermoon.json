@@ -40,7 +40,7 @@
       },
       "neg": {
         "type": "string",
-        "description": "负面提示词。留空时自动使用默认负面 'text, letters, sign, logo, watermark, signature, ui, interface'；nsfw/explicit 分级时自动追加 'mosaic, censored'。",
+        "description": "负面提示词。官方建议从无负面开始，留空即不使用负面；手动填写则生效。",
         "default": ""
       },
       "cfg": {
@@ -52,10 +52,10 @@
       },
       "steps": {
         "type": "integer",
-        "description": "采样步数。20-30。",
-        "default": 20,
+        "description": "采样步数。20-28。",
+        "default": 24,
         "minimum": 20,
-        "maximum": 30
+        "maximum": 28
       },
       "aspect_ratio": {
         "type": "string",

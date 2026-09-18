@@ -85,6 +85,15 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
+    "fuse1.0": {
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档，已过期）",
+        "schema": "tool_schema_fuse10.json",
+        "knowledge": {
+            "fuse_expert": "fuse10_expert.md",
+            "artist_list": "artist_list.md",
+        },
+        "deprecated": True,
+    },
     "aesthetic_v1": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_simple.json",
@@ -147,6 +156,14 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
+    "cyberreal": {
+        "description": "AnimaTool 图像生成（Anima 系写实插画）",
+        "schema": "tool_schema_cyberreal.json",
+        "knowledge": {
+            "cyberreal_expert": "cyberreal_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
 }
 
 DEFAULT_WORKFLOW = "base"
@@ -172,6 +189,8 @@ def _generate_dispatch(executor: AnimaExecutor, workflow: str, payload: dict):
         return executor.generate_v2(payload, "turbo1.0")
     if workflow == "fuse":
         return executor.generate_v2(payload, "fuse")
+    if workflow == "fuse1.0":
+        return executor.generate_v2(payload, "fuse1.0")
     if workflow == "aesthetic_v1":
         return executor.generate_v2(payload, "aesthetic1.0")
     if workflow == "ultrareal":
@@ -188,6 +207,8 @@ def _generate_dispatch(executor: AnimaExecutor, workflow: str, payload: dict):
         return executor.generate_v2(payload, "aura")
     if workflow == "aura-speed":
         return executor.generate_v2(payload, "aura-speed")
+    if workflow == "cyberreal":
+        return executor.generate_v2(payload, "cyberreal")
     return executor.generate(payload)
 
 

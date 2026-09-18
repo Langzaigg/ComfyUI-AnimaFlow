@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **fuse 1.1 / Turbo LoRA 1.1 横评与转正（2026-09-18）**: `examples/anima29_newmodels_test.py` + 融合/重映射脚本 `merge_sm29t_fuse_turbo.py` / `merge_sm29_fuse_turbo.py` / `merge_fuse29aes_turbo.py` / `remap_turbo_v4_lora_29b.py`，14 场景（含新单人例 s11_tuchan_autumn / s12_tuchan_coat 兔酱秋装）× 多模型同 seed 横评。结论：silvermoon29_turbo × turbo1.1 融合比例 0.3 为甜区（3.5 第一/2 垫底），改走旧 fuse 参数（8 步 cfg1.2+文字负面）无稳定收益；r030 + silvermoon_turbo 官方参数（10 步 cfg1 euler a+normal 无负面）转正为新 fuse。报告：`examples/results/anima29_newmodels_20260918_101609/report.md`。
+- **fuse v1.1 工作流**: `fuse` 预设换用融合 UNET `anima29b-sm29t-fuse1.1.safetensors`（[SilvermoonMix Anima Evolved](https://civitai.com/models/2639339/silvermoonmix-anima-evolved) v2329B Turbo × anima-turbo-v1.1 按 0.3/0.7 加权，非官方衍生），采样 10 步、cfg 固定 1.0、Euler a + normal、无负面；`knowledge/fuse_expert.md` 与 `schemas/tool_schema_fuse.json` 重写（neg 字段改为惰性说明，cfg 字段移除）。
+- **fuse1.0 工作流（已过期）**: 旧 fuse（`anima29b-p1-turbo1.1.safetensors`，8 步 euler+sgm_uniform，内置文字类负面 cfg 1.2）平移为 `fuse1.0` 并标记 `deprecated: true`；schema/knowledge 快照为 `tool_schema_fuse10.json` / `fuse10_expert.md`。
+- **Turbo LoRA v1.1（anima29_turbo）**: 默认 LoRA 换为 `anima29b-turbolora1.1.safetensors`（[Turbo-ANIMA](https://civitai.com/models/2619830/turbo-for-anima-less-steps) v4 的 2.9B 免补丁重映射版，非官方衍生；`examples/remap_turbo_v4_lora_29b.py` 生成，1362 键/1248 重映射），强度 0.8 与采样参数不变，不再需要 loraPatch 运行时补丁。
+- **v1.1 衍生模型发布**: Hugging Face 仓库 <https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial>（fuse 融合 UNET v1.1 + Turbo LoRA v1.1 双产物，CircleStone 非商业许可）。
+
+### Changed
+
+- **silvermoon 升级 v2329B**: `silvermoonmixAnima_v23` → `silvermoonmixAnima_v2329B.safetensors`，24 步（20-28）cfg 4.5（4-5）Euler a + normal，默认无负面（官方建议）；`silvermoon_turbo` 预设移除（v2329BTurbo 模型保留为 fuse v1.1 融合基底，可 payload `unet_name` 覆盖使用）。
+- **turbo/aesthetic 模型文件名数字更新**: `anima-turbo-v1.1.safetensors` / `anima-aesthetic-v1.1.safetensors`。
+- **测试注册表收敛**: `examples/model_test/models.py` 移除引用已清理探针 checkpoint 的条目（sm29t/sm29 融合比例探针、fuse29aes、v23 对照、旧 fuse 强度/采样探针、v2.9/v3 LoRA 探针等）；`fuse` 描述更新、`fuse1.0` 标记 `deprecated: true`、`exp29_turbov4` 改用 turbolora1.1。
+
+### Removed
+
+- **未转正探针 checkpoint 清理**: 融合探针 `anima29_fuse_turbo_r080/r090/r100`、`sm29t_fuse_turbo_r050/r080`、`sm29_fuse_turbo_r080`、`anima29b-aes-turbo1.1`，旧模型 `silvermoonmixAnima_v23`、`anima29B_v10_int8`，已移除工作流的旧模型 `miaomiaoHarem_anima15` / `miaomiaoHarem_anima8Step10` / `novaAnimeAM_v40` / `nyaIrisAnima` / `anima-kirazuri-v4`（kira/nova/miao 工作流 2026-08-28 已移除，测试注册表 kira 死条目一并删除），旧 LoRA `Turbo-ANIMA-v2.9`、`anima29b-turbo-v2.9-remap`、`Turbo-ANIMA-v3`、`Anima-2.9B_Turbo-BF16`、`Turbo-ANIMA-v4`（28 块原版）、`kirazuri-anima-turbo-v4-8step`——均无现役预设引用，共释放约 66GB。
+
 ### Changed
 
 - **README 重写**: 精简为快速入口（安装 / 三种接入 / 工作流一览与选型 / 文档导航），详细参数与故障排查移至 wiki；新增「工作流特点与选型」章节与同 prompt 同 seed 的多人兽耳娘场景六工作流对比例图（`assets/example_picnic_compare.webp`）；测试脚本与生成结果（`examples/` 测试代码、`outputs/`）不再进 git，仅保留 `examples/requests/` 与 `examples/loras/` 示例。

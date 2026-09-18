@@ -40,16 +40,12 @@
       },
       "neg": {
         "type": "string",
-        "description": "一般不需要填写：工作流内置文字类负面（text, letters, sign, logo, watermark, signature, username, artist name）并以 cfg 1.2 使其生效，假签名/水印已被默认抑制。填写后会替换内置负面（需要同时保留时把文字类词一并写上）；留空则使用内置负面。",
+        "description": "不要填写：cfg 固定 1.0，负面不进入采样（惰性）；本工作流按官方建议使用无负面。",
         "default": ""
-      },
-      "cfg": {
-        "type": "number",
-        "description": "CFG 引导强度（1.0-1.6）。缺省 1.2（内置文字类负面常驻生效）。"
       },
       "steps": {
         "type": "integer",
-        "description": "采样步数（8-12）。缺省使用该工作流的官方推荐值。"
+        "description": "采样步数（8-12）。缺省使用该工作流的官方推荐值（10）。"
       },
       "aspect_ratio": {
         "type": "string",

@@ -28,7 +28,7 @@ from executor import AnimaExecutor, AnimaToolConfig
 class GenerateRequest(BaseModel):
     # 允许任意字段（由 tool schema 约束；服务端只做最小校验）
     payload: Dict[str, Any] = Field(default_factory=dict)
-    # 工作流选择：base / turbo_v1 / fuse / aesthetic_v1 / ultrareal / silvermoon / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed，缺省 base
+    # 工作流选择：base / turbo_v1 / fuse / fuse1.0 / aesthetic_v1 / ultrareal / silvermoon / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed / cyberreal，缺省 base
     workflow: Optional[str] = Field(default=None)
 
 
@@ -84,6 +84,15 @@ WORKFLOWS = {
             "fuse_expert": "fuse_expert.md",
             "artist_list": "artist_list.md",
         },
+    },
+    "fuse1.0": {
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档，已过期）",
+        "schema": "tool_schema_fuse10.json",
+        "knowledge": {
+            "fuse_expert": "fuse10_expert.md",
+            "artist_list": "artist_list.md",
+        },
+        "deprecated": True,
     },
     "aesthetic_v1": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画）",
@@ -148,6 +157,14 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
+    "cyberreal": {
+        "description": "AnimaTool 图像生成（Anima 系写实插画）",
+        "schema": "tool_schema_cyberreal.json",
+        "knowledge": {
+            "cyberreal_expert": "cyberreal_expert.md",
+            "artist_list": "artist_list.md",
+        },
+    },
 }
 
 DEFAULT_WORKFLOW = "base"
@@ -173,6 +190,8 @@ def create_app() -> FastAPI:
             return executor.generate_v2(payload, "turbo1.0")
         if workflow == "fuse":
             return executor.generate_v2(payload, "fuse")
+        if workflow == "fuse1.0":
+            return executor.generate_v2(payload, "fuse1.0")
         if workflow == "aesthetic_v1":
             return executor.generate_v2(payload, "aesthetic1.0")
         if workflow == "ultrareal":
@@ -189,6 +208,8 @@ def create_app() -> FastAPI:
             return executor.generate_v2(payload, "aura")
         if workflow == "aura-speed":
             return executor.generate_v2(payload, "aura-speed")
+        if workflow == "cyberreal":
+            return executor.generate_v2(payload, "cyberreal")
         return executor.generate(payload)
 
     @app.get("/health")

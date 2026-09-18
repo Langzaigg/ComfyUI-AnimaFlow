@@ -47,8 +47,8 @@ DEFAULT_VAE_NAME = "qwen_image_vae.safetensors"
 BASE10_UNET_NAME = "anima-base-v1.0.safetensors"
 
 # 新模型 v1.0 文件名
-TURBO10_UNET_NAME = "anima-turbo-v1.0.safetensors"
-AESTHETIC10_UNET_NAME = "anima-aesthetic-v1.0.safetensors"
+TURBO10_UNET_NAME = "anima-turbo-v1.1.safetensors"
+AESTHETIC10_UNET_NAME = "anima-aesthetic-v1.1.safetensors"
 
 # UltraReal (Danrisi/UltraReal_FineTune_Anima_base1_v3) 模型文件名
 # Anima base1.0 的真实系微调：@ 前缀相机/灯光标签 + 自然语言 + @年份 score_N 后缀
@@ -58,17 +58,14 @@ ULTRAREAL_SAMPLER = ("er_sde", "simple")
 ULTRAREAL_STEPS = 28
 ULTRAREAL_CFG = 4.0
 
-# Silvermoon (silvermoonmixAnima_v23) 模型文件名
-# 官方推荐：Euler a + normal，CFG 4-5，steps 20-30
-# 步数实测（examples/silvermoon_steps_test.py）：20 步已收敛，25/30/35 无质量提升，
-# 30/35 步文字伪影反而更明显且耗时线性增长，故默认取 20 步。
-SILVERMOON_UNET_NAME = "silvermoonmixAnima_v23.safetensors"
+# Silvermoon (silvermoonmixAnima_v2329B，2.9B 架构) 模型文件名
+# 官方推荐：Euler a + normal，CFG 4-5，steps 20-28；Turbo 版 CFG 1，steps 8-12。
+# 官方建议从无负面开始（示例图均无负面生成），故默认负面为空。
+# 画师 tag 必须带 @ 前缀（如 @makihitsuji），否则效果很弱。
+SILVERMOON_UNET_NAME = "silvermoonmixAnima_v2329B.safetensors"
 SILVERMOON_SAMPLER = ("euler_ancestral", "normal")
-SILVERMOON_STEPS = 20
+SILVERMOON_STEPS = 24
 SILVERMOON_CFG = 4.5
-# 官方建议从无负面开始，但实测双人场景出现符文/类文字伪影、多人场景包装出现文字，
-# 故默认使用只针对文字类问题的精简负面。
-SILVERMOON_DEFAULT_NEGATIVE = "text, letters, sign, logo, watermark, signature, ui, interface"
 
 # Anima 2.9B v1.0（preview）：Anima base 的层扩展微调（28→40 层，~2.9B 参数），
 # 追加 1.7M 二次元/插画样本训练，知识截止 2026-07。训练数据无 score 标签（不用 score_N）。
@@ -79,14 +76,24 @@ ANIMA29_SAMPLER = ("euler", "sgm_uniform")
 ANIMA29_STEPS = 30
 ANIMA29_CFG = 4.0
 
-# Anima 2.9B Turbo LoRA（Turbo-ANIMA-v2.9）：配合 CFG 1 + 8-12 步使用
-ANIMA29_TURBO_LORA_NAME = "Turbo-ANIMA-v2.9.safetensors"
+# Anima 2.9B Turbo LoRA v1.1（Turbo-ANIMA-v4 重映射到 2.9B 40 块架构，见
+# examples/remap_turbo_v4_lora_29b.py；原始 LoRA 出自
+# https://civitai.com/models/2619830/turbo-for-anima-less-steps）：配合 CFG 1 + 8-12 步使用
+ANIMA29_TURBO_LORA_NAME = "anima29b-turbolora1.1.safetensors"
 ANIMA29_TURBO_STEPS = 8
 
-# Fuse：anima-turbo-v1.0（实为 turbo 1.1）与 anima29B_v10（2.9B preview1）经 AnimaModelMerge 融合
-# （turbo 权重 0.8，40 块架构），turbo 提示词体系 + anima29 采样组合；
-# cfg 1.2 使默认文字类负面生效（压制假签名/水印）
-FUSE_UNET_NAME = "anima29b-p1-turbo1.1.safetensors"
+# Fuse v1.1：silvermoonmixAnima_v2329BTurbo 与 anima-turbo-v1.1 按 0.3/0.7 加权融合
+# （见 examples/merge_sm29t_fuse_turbo.py；silvermoon 出自
+# https://civitai.com/models/2639339/silvermoonmix-anima-evolved）。
+# 横评（examples/results/anima29_newmodels_20260918_101609/report.md）：0.3 为甜区，
+# 采样沿用 silvermoon turbo 官方参数（Euler a + normal，CFG 固定 1，10 步，无负面）。
+FUSE_UNET_NAME = "anima29b-sm29t-fuse1.1.safetensors"
+FUSE_SAMPLER = ("euler_ancestral", "normal")
+FUSE_STEPS = 10
+
+# Fuse v1.0（已过期，仅保留兼容）：anima-turbo-v1.1 与 anima29B_v10 融合（turbo 权重 0.8）；
+# cfg 1.2 使文字类负面生效（压制假签名/水印）
+FUSE10_UNET_NAME = "anima29b-p1-turbo1.1.safetensors"
 FUSE_DEFAULT_NEGATIVE = "text, letters, sign, logo, watermark, signature, username, artist name"
 
 # rdbt v2.0 LoRA（anima2.9b p1）：base + distilled addon 双串联，CFG 1、默认 16 步。
@@ -109,6 +116,17 @@ AURA_STEPS = 12
 AURA_SPEED_SAMPLER = ("euler", "simple")
 AURA_SPEED_STEPS = 10
 AURA_CFG = 5.0
+
+# CyberRealistic Anima v6.0 Aesthetic v1.1（aes 写实向微调）模型文件名
+# 官方两档：快速 ~28 步 cfg 4-5.5 / 质量 40-60 步 cfg 5.5；采样 er_sde + beta/simple。
+# 实测（examples/results/cyberreal_aes_20260903_165648/report.md）：快速档 28 步 cfg 4.5 与
+# 质量档 40 步 cfg 5.5 九场景无可见差距且省 33% 时间，故默认转正快速档。
+CYBERREAL_UNET_NAME = "cyberrealisticAnima_v60AestheticV11.safetensors"
+CYBERREAL_SAMPLER = ("er_sde", "beta")
+CYBERREAL_STEPS = 28
+CYBERREAL_CFG = 4.5
+# 官方 baseline 负面（写实系 cfg>1，负面常驻生效）
+CYBERREAL_DEFAULT_NEGATIVE = "worst quality, low quality, sketch, score_1, score_2, score_3, censored"
 
 
 @dataclass

@@ -1,7 +1,8 @@
-# Anima 2.9B Turbo（anima29B_v10 + Turbo LoRA）提示词规范
+# Anima 2.9B Turbo（anima29B_v10 + anima29b-turbolora1.1 LoRA）提示词规范
 
 Anima base 的层扩展微调（28→40 层，~2.9B 参数，追加 1.7M 二次元/插画样本，知识截止 2026-07），
-再加载 Turbo LoRA 做快速生成。
+再加载 Turbo LoRA v1.1（`anima29b-turbolora1.1`，Turbo-ANIMA-v4 的 2.9B 重映射版，非官方衍生；
+原始出处 <https://civitai.com/models/2619830/turbo-for-anima-less-steps>）做快速生成。
 
 ## 字段规则
 

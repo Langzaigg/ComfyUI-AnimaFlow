@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_DEFAULT_NEGATIVE, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_DEFAULT_NEGATIVE
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, CYBERREAL_DEFAULT_NEGATIVE
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -146,16 +146,8 @@ def build_new_models_negative_text(prompt_json: Dict[str, Any]) -> str:
 
 
 def build_silvermoon_negative_text(prompt_json: Dict[str, Any]) -> str:
-    """
-    Silvermoon (silvermoonmixAnima_v23) 默认负面提示词。
-    基础只含文字类约束（SILVERMOON_DEFAULT_NEGATIVE）；
-    nsfw/explicit 分级时追加 mosaic, censored。
-    """
-    q = (prompt_json.get("quality_meta_year_safe") or "").lower()
-    explicit = "nsfw" in q or "explicit" in q
-    if explicit:
-        return f"{SILVERMOON_DEFAULT_NEGATIVE}, mosaic, censored"
-    return SILVERMOON_DEFAULT_NEGATIVE
+    """Silvermoon (silvermoonmixAnima_v2329B) 官方建议从无负面开始，默认负面为空。"""
+    return ""
 
 
 def build_anima_positive_text(prompt_json: Dict[str, Any]) -> str:
@@ -190,13 +182,21 @@ _V2_MODEL_PRESETS = {
         "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_turbo_v1_",
     },
-    # fuse：turbo 1.1 × Anima 2.9B preview1 融合 UNET anima29b-p1-turbo1.1（turbo 权重 0.8，40 块），
-    # turbo 提示词体系 + anima29 采样组合；default_negative 常驻 → 默认按 cfg_neg 1.2 采样，
-    # 文字类负面生效以压制假签名/水印。
+    # fuse：silvermoonmixAnima_v2329BTurbo × turbo 1.1 按 0.3/0.7 加权融合的 UNET
+    # anima29b-sm29t-fuse1.1；沿用 silvermoon turbo 官方参数（Euler a + normal，10 步）。
+    # cfg 固定 1.0（负面惰性），官方建议无负面，故无 default_negative。
     "fuse": {
-        "unet": FUSE_UNET_NAME, "steps": 8, "cfg": 1.0,
+        "unet": FUSE_UNET_NAME, "steps": FUSE_STEPS, "cfg": 1.0,
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.0),
+        "sampler": FUSE_SAMPLER[0], "scheduler": FUSE_SAMPLER[1], "prefix": "AnimaTool_fuse_",
+    },
+    # fuse1.0（已过期）：turbo 1.1 × Anima 2.9B preview1 融合 UNET anima29b-p1-turbo1.1
+    # （turbo 权重 0.8，40 块），turbo 提示词体系 + anima29 采样组合；
+    # default_negative 常驻 → 默认按 cfg_neg 1.2 采样，文字类负面生效以压制假签名/水印。
+    "fuse1.0": {
+        "unet": FUSE10_UNET_NAME, "steps": 8, "cfg": 1.0,
         "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
-        "sampler": "euler", "scheduler": "sgm_uniform", "prefix": "AnimaTool_fuse_",
+        "sampler": "euler", "scheduler": "sgm_uniform", "prefix": "AnimaTool_fuse10_",
         "default_negative": FUSE_DEFAULT_NEGATIVE,
     },
     "aesthetic1.0": {
@@ -206,11 +206,12 @@ _V2_MODEL_PRESETS = {
     },
     "silvermoon": {
         "unet": SILVERMOON_UNET_NAME, "steps": SILVERMOON_STEPS, "cfg": SILVERMOON_CFG,
-        "steps_range": (20, 30), "cfg_range": (4.0, 5.0),
+        "steps_range": (20, 28), "cfg_range": (4.0, 5.0),
         "sampler": SILVERMOON_SAMPLER[0], "scheduler": SILVERMOON_SAMPLER[1], "prefix": "AnimaTool_silvermoon_",
     },
     # Anima 2.9B：base 的层扩展微调（训练数据无 score 标签；质量前缀避免一切质量/score 词，只留 year 2026 + 安全标签）。
-    # turbo 变体通过预设 "lora" 启用 Turbo-ANIMA-v2.9 LoRA（steps 8-12；turbo 系规则：cfg 1-1.6，有 neg 默认 1.2）。
+    # turbo 变体通过预设 "lora" 启用 anima29b-turbolora1.1（Turbo-ANIMA-v4 重映射版；steps 8-12；
+    # turbo 系规则：cfg 1-1.6，有 neg 默认 1.2）。
     "anima29": {
         "unet": ANIMA29_UNET_NAME, "steps": ANIMA29_STEPS, "cfg": ANIMA29_CFG,
         "steps_range": (28, 50), "cfg_range": (3.5, 5.0),
@@ -244,6 +245,16 @@ _V2_MODEL_PRESETS = {
         "unet": AURA_UNET_NAME, "steps": AURA_SPEED_STEPS, "cfg": AURA_CFG,
         "steps_range": (8, 30), "cfg_range": (4.0, 5.0),
         "sampler": AURA_SPEED_SAMPLER[0], "scheduler": AURA_SPEED_SAMPLER[1], "prefix": "AnimaTool_aura_speed_",
+    },
+    # CyberRealistic Anima v6.0 Aesthetic v1.1：aes 写实向微调（写实系）。
+    # 实测转正快速档：28 步 cfg 4.5（质量档 40-60 步 cfg 5.5 可选，九场景实测无可见差距）。
+    # 提示词用官方真实感写法（score_8, score_9 + real life, realistic，见 knowledge/cyberreal_expert.md）；
+    # 默认官方 baseline 负面常驻（cfg>1 生效），写实风慎用画师 tag。
+    "cyberreal": {
+        "unet": CYBERREAL_UNET_NAME, "steps": CYBERREAL_STEPS, "cfg": CYBERREAL_CFG,
+        "steps_range": (20, 60), "cfg_range": (4.0, 5.5),
+        "sampler": CYBERREAL_SAMPLER[0], "scheduler": CYBERREAL_SAMPLER[1], "prefix": "AnimaTool_cyberreal_",
+        "default_negative": CYBERREAL_DEFAULT_NEGATIVE,
     },
 }
 
@@ -620,7 +631,7 @@ class AnimaExecutor:
         wf["44"]["inputs"]["unet_name"] = str(unet_name)
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
-        # LoRA：预设带 "lora" 时启用（如 anima29_turbo 的 Turbo-ANIMA-v2.9），
+        # LoRA：预设带 "lora" 时启用（如 anima29_turbo 的 anima29b-turbolora1.1），
         # 其余完整 UNET 模型关闭 LoRA。可用 prompt_json 的 lora_name / lora_strength 覆盖。
         preset_lora = preset.get("lora")
         if preset_lora or prompt_json.get("lora_name"):
@@ -658,7 +669,7 @@ class AnimaExecutor:
             default_negative = preset.get("default_negative")
             if default_negative:
                 negative = default_negative
-            elif model == "silvermoon":
+            elif model.startswith("silvermoon") or model == "fuse":
                 negative = build_silvermoon_negative_text(prompt_json)
             else:
                 negative = build_new_models_negative_text(prompt_json)
