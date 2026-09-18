@@ -28,7 +28,7 @@ from executor import AnimaExecutor, AnimaToolConfig
 class GenerateRequest(BaseModel):
     # 允许任意字段（由 tool schema 约束；服务端只做最小校验）
     payload: Dict[str, Any] = Field(default_factory=dict)
-    # 工作流选择：base / turbo_v1 / fuse / fuse1.0 / aesthetic_v1 / ultrareal / silvermoon / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed / cyberreal，缺省 base
+    # 工作流选择：base / turbo_v1 / fuse / fuse1.0 / aesthetic_v1 / ultrareal / silvermoon / silvermoon_turbo / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed / cyberreal，缺省 base
     workflow: Optional[str] = Field(default=None)
 
 
@@ -116,6 +116,15 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
+    "silvermoon_turbo": {
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
+        "schema": "tool_schema_silvermoon_turbo.json",
+        "knowledge": {
+            "silvermoon_expert": "silvermoon_turbo_expert.md",
+            "silvermoon_examples": "silvermoon_examples.md",
+            "artist_list": "artist_list.md",
+        },
+    },
     # Anima 2.9B 家族：anima29 / anima29_turbo / anima29_rdbt 各有独立 schema 与 knowledge 文件
     "anima29": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画）",
@@ -198,6 +207,8 @@ def create_app() -> FastAPI:
             return executor.generate_ultrareal(payload)
         if workflow == "silvermoon":
             return executor.generate_v2(payload, "silvermoon")
+        if workflow == "silvermoon_turbo":
+            return executor.generate_v2(payload, "silvermoon_turbo")
         if workflow == "anima29":
             return executor.generate_v2(payload, "anima29")
         if workflow == "anima29_turbo":

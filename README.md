@@ -102,8 +102,8 @@ python -m servers.cli --help
 | `aura` / `aura_speed` | AuraAnima 2.9B Int8 量化，精度重视（er_sde+beta, 12 步）/ 速度重视（euler+simple, 10 步），显存约为 BF16 一半 |
 | `base` | Anima base 1.0 完整字段工作流（默认） |
 | `turbo_v1` / `aesthetic_v1` | Turbo 1.0 独立 UNET / Aesthetic 1.0 高质量微调 |
-| `ultrareal` / `silvermoon` | 写实照片风微调 / Silvermoon 混合模型 |
-| `cyberreal` | CyberRealistic Anima（写实插画微调，默认 28 步 cfg 4.5，er_sde+beta） |
+| `ultrareal` / `silvermoon` / `silvermoon_turbo` | 写实照片风微调 / Silvermoon 混合模型（24 步）/ 其 Turbo 变体（10 步 cfg 1） |
+| `cyberreal` | CyberRealistic Anima v7.0 Turbo（写实插画微调，默认 10 步 cfg 1，euler） |
 
 各工作流的提示词规范、参数范围见对应的 schema 与 knowledge 文档（`schemas/`、`knowledge/`，或经 `/anima/schema?workflow=xxx` 获取）。
 
@@ -137,7 +137,8 @@ fuse v1.1 示例（10 步 cfg 1 Euler a 无负面）：
 - `aesthetic_v1`：高质量微调（20-60 步），适合慢工出细活。
 - `ultrareal`：写实照片风微调，提示词为「@前缀标签 + 自然语言 + @年份/score 后缀」三段式，与其他工作流差异最大。
 - `silvermoon`：混合模型（24 步），score_N 质量前缀，画面明亮清透，介于动漫与半写实之间。
-- `cyberreal`：写实插画微调（28 步），score_N + 风格槽提示词（默认真实感写法 `real life, realistic`），肤质/面部细节强；cfg>1 负面常驻生效。半写实角色与写实 leaning 场景优先。
+- `silvermoon_turbo`：v2329B 的 Turbo 变体（10 步 cfg 1，Euler a + normal，无负面），silvermoon 画风的快速档。
+- `cyberreal`：写实插画微调 v7.0 Turbo（10 步 cfg 1，euler），score_N + 风格槽提示词（默认真实感写法 `real life, realistic`），肤质/面部细节强；负面默认惰性，写 neg 时以 cfg 1.2 生效。半写实角色与写实 leaning 场景优先。
 
 ## 配置
 

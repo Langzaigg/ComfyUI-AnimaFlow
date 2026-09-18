@@ -135,11 +135,13 @@ MCP Server 返回：
 | `aesthetic_v1` | Aesthetic 1.0：高质量微调完整 UNET |
 | `ultrareal` | UltraReal (UltraReal_FineTune_Anima_base1_v3)：真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式） |
 | `silvermoon` | Silvermoon (silvermoonmixAnima_v2329B)：混合模型（cfg 4-5，steps 20-28 默认 24，Euler a + normal，无负面），score_N 质量前缀 |
+| `silvermoon_turbo` | Silvermoon v2329B Turbo：快速变体（cfg 1-1.6 默认 1，steps 8-12 默认 10，Euler a + normal，无负面） |
 | `anima29` | Anima 2.9B v1.0：base 层扩展微调（cfg 3.5-5，steps 28-50 默认 30，euler + sgm_uniform） |
 | `anima29_turbo` | Anima 2.9B + anima29b-turbolora1.1 LoRA（Turbo-ANIMA-v4 重映射版，强度 0.8，cfg 1-1.6，steps 8-12 默认 8） |
 | `anima29_rdbt` | Anima 2.9B + rdbt v2.0 双 LoRA（cfg 1-1.6，steps 8-32 默认 16） |
 | `aura` | AuraAnima 2.9B Int8 量化·精度重视（er_sde+beta，steps 默认 12，cfg 4-5） |
 | `aura-speed` | AuraAnima 2.9B Int8 量化·速度重视（euler+simple，steps 默认 10，cfg 4-5） |
+| `cyberreal` | CyberRealistic Anima v7.0 Turbo：写实插画微调（基于 Anima Turbo V1.1，cfg 1-1.5 默认 1，steps 8-12 默认 10，euler），score_N + 风格槽提示词 |
 
 - `GET /anima/schema?workflow=turbo_v1` — 返回对应工作流的 Tool Schema
 - `GET /anima/knowledge?workflow=turbo_v1` — 返回对应工作流的专家知识
@@ -387,11 +389,13 @@ curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=ultrareal" \
 | Aesthetic 1.0 | `/anima/generate_aesthetic_v1` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 简化（无 style/tags/environment） |
 | UltraReal | `/anima/generate?workflow=ultrareal` | 默认 4 | 默认 28 | 有（内置默认） | 三段式（tags 前缀 + nltags 自然语言 + 后缀） |
 | Silvermoon | `/anima/generate?workflow=silvermoon` | 4-5, 默认 4.5 | 20-28, 默认 24 | 无 | 简化（无 style/tags/environment），score_N 质量前缀 |
+| Silvermoon Turbo | `/anima/generate?workflow=silvermoon_turbo` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 无（默认惰性） | 简化（无 style/tags/environment），score_N 质量前缀 |
 | Anima 2.9B | `/anima/generate?workflow=anima29` | 3.5-5, 默认 4 | 28-50, 默认 30 | 有 | 简化（无 style/tags/environment），无质量词前缀 |
 | Anima 2.9B Turbo | `/anima/generate?workflow=anima29_turbo` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 8 | 有 | 简化，无质量词前缀 |
 | Anima 2.9B rdbt | `/anima/generate?workflow=anima29_rdbt` | 1-1.6，默认 1（写 neg 时 1.2） | 8-32, 默认 16 | 有 | 简化，无质量词前缀 |
 | Aura | `/anima/generate?workflow=aura` | 4-5, 默认 5 | 8-30, 默认 12 | 有 | 简化，风格质量标签三选一 |
 | Aura-speed | `/anima/generate?workflow=aura-speed` | 4-5, 默认 5 | 8-30, 默认 10 | 有 | 简化，风格质量标签三选一 |
+| CyberReal | `/anima/generate?workflow=cyberreal` | 1-1.5，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 有（默认惰性） | 简化，score_N + 风格槽 |
 
 > 简化字段工作流（turbo_v1 / fuse / aesthetic_v1 / silvermoon / anima29 系 / aura 系）的 `tags` 为英文自然语言完整句子；base 的自然语言在 `nltags`，ultrareal 为三段式。`appearance` 等标签字段只填有明确指代的标准 Danbooru tag，不要编造。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分逐角色分别描述。
 

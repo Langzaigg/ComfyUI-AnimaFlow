@@ -116,6 +116,15 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
+    "silvermoon_turbo": {
+        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
+        "schema": "tool_schema_silvermoon_turbo.json",
+        "knowledge": {
+            "silvermoon_expert": "silvermoon_turbo_expert.md",
+            "silvermoon_examples": "silvermoon_examples.md",
+            "artist_list": "artist_list.md",
+        },
+    },
     "anima29": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_anima29.json",
@@ -197,6 +206,8 @@ def _generate_dispatch(executor: AnimaExecutor, workflow: str, payload: dict):
         return executor.generate_ultrareal(payload)
     if workflow == "silvermoon":
         return executor.generate_v2(payload, "silvermoon")
+    if workflow == "silvermoon_turbo":
+        return executor.generate_v2(payload, "silvermoon_turbo")
     if workflow == "anima29":
         return executor.generate_v2(payload, "anima29")
     if workflow == "anima29_turbo":

@@ -40,22 +40,22 @@
       },
       "neg": {
         "type": "string",
-        "description": "负面提示词。留空时自动使用官方 baseline 'worst quality, low quality, sketch, score_1, score_2, score_3, censored'。需要压制衣物/招牌上的乱码文字时自行追加 'text, watermark, logo, signature'。",
+        "description": "负面提示词。一般留空（默认 cfg 1.0，负面惰性不生效）。需要压制顽固属性时填写，填写后默认以 cfg 1.2 生效；低质元素可用官方 baseline 'worst quality, low quality, sketch, score_1, score_2, score_3, censored'，压制衣物/招牌乱码文字用 'text, watermark, logo, signature'。",
         "default": ""
       },
       "cfg": {
         "type": "number",
-        "description": "CFG 引导强度。默认 4.5（快速档）；追求最高质量可用 5.5 并配合 steps 40-60。",
-        "default": 4.5,
-        "minimum": 4,
-        "maximum": 5.5
+        "description": "CFG 引导强度（1.0-1.5）。缺省：填写 neg 时 1.2，留空时 1.0。",
+        "default": 1.0,
+        "minimum": 1.0,
+        "maximum": 1.5
       },
       "steps": {
         "type": "integer",
-        "description": "采样步数。默认 28（快速档，实测与 40 步质量档无可见差距）；追求最高质量可用 40-60。",
-        "default": 28,
-        "minimum": 20,
-        "maximum": 60
+        "description": "采样步数（8-12）。缺省使用该工作流的官方推荐值（10）。",
+        "default": 10,
+        "minimum": 8,
+        "maximum": 12
       },
       "aspect_ratio": {
         "type": "string",

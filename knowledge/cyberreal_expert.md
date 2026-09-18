@@ -1,6 +1,6 @@
-# CyberRealistic Anima 提示词专家知识
+# CyberRealistic Anima（v7.0 Turbo）提示词专家知识
 
-写实向微调的 Anima：默认出半写实/写实 leaning 的画面，肤质、面部与眼睛细节更强，
+写实向微调的 Anima（v7.0 Turbo 基于 Anima Turbo V1.1）：默认出半写实/写实 leaning 的画面，肤质、面部与眼睛细节更强，
 不需要堆叠大量质量词也能得到完成度高的结果。标签与自然语言理解能力与 Anima 本体一致。
 
 ## 提示词方式
@@ -31,10 +31,10 @@
 
 - 正面（真实感，默认）：`masterpiece, best quality, highres, score_8, score_9, <安全分级>, real life, realistic`
 - 正面（半真实，更偏二次元）：`masterpiece, best quality, highres, score_7, score_8, <安全分级>, realistic`
-- 负面（官方 baseline，默认自动带上）：`worst quality, low quality, sketch, score_1, score_2, score_3, censored`
+- 负面（一般留空）：默认 cfg 1.0 下负面惰性不生效；要压制顽固属性（如乱码文字、低质元素）时填写，默认以 cfg 1.2 生效，
+  可用官方 baseline：`worst quality, low quality, sketch, score_1, score_2, score_3, censored`
 
 score 越高越精致；降到 `score_6, score_7` 会略偏"动漫感"。改 score 要搭配风格槽一起用。
-负面一般不用动；它的另一个用途是压制正面里甩不掉的顽固属性。
 
 ## 标签顺序
 
@@ -45,9 +45,8 @@ score 越高越精致；降到 `score_6, score_7` 会略偏"动漫感"。改 sco
 
 ## 采样参数
 
-- 默认（快速档）：steps 28, cfg 4.5, er_sde + beta —— 实测与质量档无可见差距，推荐日常用。
-- 质量档：steps 40-60, cfg 5.5 —— 最终出片用，耗时多约 50%。
-- 不要把步数压到 20 以下（质量劣化），也不要把 cfg 推过 5.5（会烧）。
+- 官方推荐（v7.0 Turbo）：steps 8-12（默认 10），cfg 1-1.5（默认 1.0），euler。
+- turbo 系规则：默认 cfg 1.0 下负面惰性；写 neg 时默认以 cfg 1.2 使负面生效。
 - 分辨率越高细节越好：推荐 1024x1536 / 768x1024 档位，不要超过约 2MP。
 
 ## 安全分级
@@ -57,5 +56,5 @@ score 越高越精致；降到 `score_6, score_7` 会略偏"动漫感"。改 sco
 
 ## 实测注意点
 
-- 衣物/招牌上偶尔自发出现乱码文字，在意时负面追加 `text, watermark, logo, signature`。
+- 衣物/招牌上偶尔自发出现乱码文字，在意时负面写 `text, watermark, logo, signature`（默认以 cfg 1.2 生效）。
 - 写实风下去掉画师 tag 更稳；画面会被强画师风格接管。

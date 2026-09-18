@@ -66,6 +66,9 @@ SILVERMOON_UNET_NAME = "silvermoonmixAnima_v2329B.safetensors"
 SILVERMOON_SAMPLER = ("euler_ancestral", "normal")
 SILVERMOON_STEPS = 24
 SILVERMOON_CFG = 4.5
+# Turbo 变体（silvermoonmixAnima_v2329BTurbo）：官方推荐 CFG 1，steps 8-12，无负面
+SILVERMOON_TURBO_UNET_NAME = "silvermoonmixAnima_v2329BTurbo.safetensors"
+SILVERMOON_TURBO_STEPS = 10
 
 # Anima 2.9B v1.0（preview）：Anima base 的层扩展微调（28→40 层，~2.9B 参数），
 # 追加 1.7M 二次元/插画样本训练，知识截止 2026-07。训练数据无 score 标签（不用 score_N）。
@@ -117,16 +120,13 @@ AURA_SPEED_SAMPLER = ("euler", "simple")
 AURA_SPEED_STEPS = 10
 AURA_CFG = 5.0
 
-# CyberRealistic Anima v6.0 Aesthetic v1.1（aes 写实向微调）模型文件名
-# 官方两档：快速 ~28 步 cfg 4-5.5 / 质量 40-60 步 cfg 5.5；采样 er_sde + beta/simple。
-# 实测（examples/results/cyberreal_aes_20260903_165648/report.md）：快速档 28 步 cfg 4.5 与
-# 质量档 40 步 cfg 5.5 九场景无可见差距且省 33% 时间，故默认转正快速档。
-CYBERREAL_UNET_NAME = "cyberrealisticAnima_v60AestheticV11.safetensors"
-CYBERREAL_SAMPLER = ("er_sde", "beta")
-CYBERREAL_STEPS = 28
-CYBERREAL_CFG = 4.5
-# 官方 baseline 负面（写实系 cfg>1，负面常驻生效）
-CYBERREAL_DEFAULT_NEGATIVE = "worst quality, low quality, sketch, score_1, score_2, score_3, censored"
+# CyberRealistic Anima v7.0 Turbo BF16（写实向微调，基于 Anima Turbo V1.1）模型文件名
+# 官方推荐：CFG 1-1.5，steps 8-12；基于 turbo 1.1，采样沿用 turbo 系组合 euler。
+# turbo 系规则：默认 cfg 1.0（负面惰性），写 neg 时默认 cfg_neg 1.2 使负面生效。
+CYBERREAL_UNET_NAME = "cyberrealisticAnima_v70Turbo_bf16.safetensors"
+CYBERREAL_SAMPLER = ("euler", None)
+CYBERREAL_STEPS = 10
+CYBERREAL_CFG = 1.0
 
 
 @dataclass

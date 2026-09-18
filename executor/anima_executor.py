@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, CYBERREAL_DEFAULT_NEGATIVE
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -209,6 +209,12 @@ _V2_MODEL_PRESETS = {
         "steps_range": (20, 28), "cfg_range": (4.0, 5.0),
         "sampler": SILVERMOON_SAMPLER[0], "scheduler": SILVERMOON_SAMPLER[1], "prefix": "AnimaTool_silvermoon_",
     },
+    # v2329B Turbo 变体：官方 CFG 1 + 8-12 步 + 无负面（turbo 系规则：写 neg 默认 cfg_neg 1.2 生效）
+    "silvermoon_turbo": {
+        "unet": SILVERMOON_TURBO_UNET_NAME, "steps": SILVERMOON_TURBO_STEPS, "cfg": 1.0,
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
+        "sampler": SILVERMOON_SAMPLER[0], "scheduler": SILVERMOON_SAMPLER[1], "prefix": "AnimaTool_silvermoon_turbo_",
+    },
     # Anima 2.9B：base 的层扩展微调（训练数据无 score 标签；质量前缀避免一切质量/score 词，只留 year 2026 + 安全标签）。
     # turbo 变体通过预设 "lora" 启用 anima29b-turbolora1.1（Turbo-ANIMA-v4 重映射版；steps 8-12；
     # turbo 系规则：cfg 1-1.6，有 neg 默认 1.2）。
@@ -246,15 +252,14 @@ _V2_MODEL_PRESETS = {
         "steps_range": (8, 30), "cfg_range": (4.0, 5.0),
         "sampler": AURA_SPEED_SAMPLER[0], "scheduler": AURA_SPEED_SAMPLER[1], "prefix": "AnimaTool_aura_speed_",
     },
-    # CyberRealistic Anima v6.0 Aesthetic v1.1：aes 写实向微调（写实系）。
-    # 实测转正快速档：28 步 cfg 4.5（质量档 40-60 步 cfg 5.5 可选，九场景实测无可见差距）。
-    # 提示词用官方真实感写法（score_8, score_9 + real life, realistic，见 knowledge/cyberreal_expert.md）；
-    # 默认官方 baseline 负面常驻（cfg>1 生效），写实风慎用画师 tag。
+    # CyberRealistic Anima v7.0 Turbo：写实向微调（基于 Anima Turbo V1.1）。
+    # 官方推荐 cfg 1-1.5 / steps 8-12；turbo 系规则：默认 cfg 1.0 负面惰性，
+    # 写 neg 默认 cfg_neg 1.2 生效。提示词用官方真实感写法（score_8, score_9 + real life,
+    # realistic，见 knowledge/cyberreal_expert.md）；写实风慎用画师 tag。
     "cyberreal": {
         "unet": CYBERREAL_UNET_NAME, "steps": CYBERREAL_STEPS, "cfg": CYBERREAL_CFG,
-        "steps_range": (20, 60), "cfg_range": (4.0, 5.5),
+        "steps_range": (8, 12), "cfg_range": (1.0, 1.5), "cfg_neg": 1.2,
         "sampler": CYBERREAL_SAMPLER[0], "scheduler": CYBERREAL_SAMPLER[1], "prefix": "AnimaTool_cyberreal_",
-        "default_negative": CYBERREAL_DEFAULT_NEGATIVE,
     },
 }
 

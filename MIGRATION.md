@@ -10,6 +10,8 @@
 | `fuse1.0`（已过期） | 旧 fuse（`anima29b-p1-turbo1.1.safetensors`，8 步 euler+sgm_uniform，内置文字类负面 cfg 1.2）整体平移为 `fuse1.0` 工作流并标记 `deprecated: true`——仍可调通，新流程请用 `fuse` |
 | `anima29_turbo` LoRA 更换 | 默认 Turbo LoRA 换为 `anima29b-turbolora1.1.safetensors`（[Turbo-ANIMA](https://civitai.com/models/2619830/turbo-for-anima-less-steps) v4 的 2.9B 免补丁重映射版，非官方衍生），强度 0.8 与采样参数不变；不再需要 `ComfyUI-Anima-2.9B-loraPatch` 运行时补丁 |
 | `silvermoon` 升级 | 模型换为 `silvermoonmixAnima_v2329B.safetensors`：24 步（20-28）、cfg 4.5（4-5）、Euler a + normal、**默认无负面**；画师 tag 必须带 `@` 前缀 |
+| `silvermoon_turbo`（新增） | v2329B Turbo 变体工作流：`silvermoonmixAnima_v2329BTurbo.safetensors`，10 步（8-12）、cfg 1.0（写 neg 默认 1.2）、Euler a + normal、默认无负面；提示词规则与 silvermoon 一致 |
+| `cyberreal` 升级 v7.0 Turbo | 模型换为 `cyberrealisticAnima_v70Turbo_bf16.safetensors`（基于 Anima Turbo V1.1）：10 步（8-12）、cfg 1.0（1-1.5，写 neg 默认 1.2）、euler；旧版 v6.0 的内置 baseline 负面取消（负面默认惰性）；提示词写法（score_N + 风格槽）不变 |
 | turbo/aesthetic 路径 | `anima-turbo-v1.1.safetensors` / `anima-aesthetic-v1.1.safetensors`（文件名数字更新） |
 | 模型下载 | v1.1 融合 UNET 与 Turbo LoRA 发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（CircleStone 非商业许可）；v1.0 旧产物仍在 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial) |
 

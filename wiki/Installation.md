@@ -47,6 +47,8 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `auranima29B_qpolaP101Int8W8a8.safetensors` | `models/diffusion_models/` | aura / aura-speed（Int8 量化） |
 | `Anima_UltraReal_finetune_v3.safetensors` | `models/diffusion_models/` | ultrareal |
 | `silvermoonmixAnima_v2329B.safetensors` | `models/diffusion_models/` | silvermoon |
+| `silvermoonmixAnima_v2329BTurbo.safetensors` | `models/diffusion_models/` | silvermoon_turbo |
+| `cyberrealisticAnima_v70Turbo_bf16.safetensors` | `models/diffusion_models/` | cyberreal |
 
 > **非官方衍生模型下载**：fuse 融合 UNET 与 Turbo LoRA 重映射版（v1.1）发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)；原始出处为 [SilvermoonMix Anima Evolved](https://civitai.com/models/2639339/silvermoonmix-anima-evolved) 与 [Turbo-ANIMA](https://civitai.com/models/2619830/turbo-for-anima-less-steps)，CircleStone 非商业许可。旧版 v1.0（已过期）在 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)。
 
