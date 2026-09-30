@@ -73,12 +73,41 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `/anima/generate` | POST | 生成（body 顶层 `workflow` 字段选择；支持 `repeat` 批量） |
 | `/anima/history` | GET | 最近生成历史 |
 | `/anima/reroll` | POST | 基于历史记录重新生成 |
+| `/anima/characters` | GET / POST | 人设库列表（`?q=` / `?label=` / `?nsfw=0`，ETag 缓存校验）/ 新建 |
+| `/anima/characters/{id}` | GET / PUT / PATCH / DELETE | 单个人设读取 / 部分更新 / 删除 |
+| `/anima/characters/match` | POST | 文本按名称/别名匹配人设 `{text, limit}` |
+| `/anima/characters/import` | POST | 批量导入 `{characters, mode: merge\|replace}` |
+| `/anima/characters/schema` | GET | 人设记录 JSON Schema |
 
 ```bash
 curl -X POST "http://127.0.0.1:8188/anima/generate" \
   -H "Content-Type: application/json" \
   -d '{"workflow":"anima29_turbo","aspect_ratio":"3:4","count":"1girl","tags":"white dress, smile, garden"}'
 ```
+
+#### 人设库（`/anima/characters`）
+
+给多个下游（Web 画图前端、聊天机器人、Agent）共用的一份角色人设。数据存插件目录 `data/characters.json`（已 gitignore，可用环境变量 `ANIMATOOL_CHARACTERS_FILE` 改位置），写入原子替换并保留 `.bak`，外部改写文件后按 mtime 自动重载。
+
+一条人设（完整约束见 `GET /anima/characters/schema`）：
+
+```json
+{
+  "id": "c_1a2b3c4d", "name": "兔酱", "aliases": ["兔兔"],
+  "tag_name": "rabbit girl", "series": "original", "count": "1girl",
+  "tags": "rabbit girl, light brown hair, long hair, amber eyes, rabbit ears",
+  "description": "浅茶色及腰长发，琥珀色眼眸，长兔耳……",
+  "outfits": [{"name": "秋装", "tags": "white shirt, brown pinafore dress", "description": "", "default": true}],
+  "artist": "@makihitsuji", "notes": "夏装不戴礼帽", "personality": "说话傲娇利落",
+  "labels": ["本家"], "nsfw": false, "source": "web", "extra": {},
+  "created_at": 1790700000.0, "updated_at": 1790700000.0
+}
+```
+
+- 画图只用外观字段：组合提示词 = `count + tag_name + series + tags + 选中造型的 tags`，画师放 `artist`；`personality` 仅供对话类下游参考。
+- 名称全库唯一（大小写不敏感，重名 409）；`tags` 保存时规范为 `a, b, c`（去空项、去重、去零宽字符）。
+- `match`：ASCII 名要求词边界（`cy` 不命中 `cyan`），被其他人设更长的命中词完全覆盖时丢弃（「Chaos前世」只命中别名为 Chaos前世 的人设）。
+- 列表响应带 `revision`（每次写入 +1）与 `ETag: "chars-<revision>"`，下游可用 `If-None-Match` 低成本轮询。
 
 ### 方式 3：独立 FastAPI / CLI
 

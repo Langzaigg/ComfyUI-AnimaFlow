@@ -288,6 +288,57 @@ MCP Server 返回：
 
 ---
 
+### 人设库 `/anima/characters`
+
+给 Web 画图前端、聊天机器人等下游共用的一份角色人设。数据存插件目录 `data/characters.json`（可用环境变量 `ANIMATOOL_CHARACTERS_FILE` 改位置），写入原子替换并保留一份 `.bak`，文件被外部改写后按 mtime 自动重载，无需重启 ComfyUI。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/anima/characters` | 列表，支持 `?q=` 关键词、`?label=` 分组、`?nsfw=0` 排除 NSFW |
+| POST | `/anima/characters` | 新建（201；重名 409） |
+| GET | `/anima/characters/schema` | 人设记录的 JSON Schema（完整字段约束） |
+| POST | `/anima/characters/match` | 文本按名称/别名匹配人设 |
+| POST | `/anima/characters/import` | 批量导入（`merge` / `replace`） |
+| GET | `/anima/characters/{id}` | 单个人设 |
+| PUT / PATCH | `/anima/characters/{id}` | 部分更新（只改传了的字段） |
+| DELETE | `/anima/characters/{id}` | 删除 |
+
+一条人设（完整约束见 `GET /anima/characters/schema`）：
+
+```json
+{
+  "id": "c_1a2b3c4d", "name": "兔酱", "aliases": ["兔兔"],
+  "tag_name": "rabbit girl", "series": "original", "count": "1girl",
+  "tags": "rabbit girl, light brown hair, long hair, amber eyes, rabbit ears",
+  "description": "浅茶色及腰长发，琥珀色眼睛，长兔耳……",
+  "outfits": [{"name": "秋装", "tags": "white shirt, brown pinafore dress", "description": "", "default": true}],
+  "artist": "@makihitsuji", "notes": "夏装不戴礼帽", "personality": "说话俏皮利落",
+  "labels": ["本家"], "nsfw": false, "source": "web", "extra": {},
+  "created_at": 1790700000.0, "updated_at": 1790700000.0
+}
+```
+
+- 画图只用外观字段：组合提示词 = `count + tag_name + series + tags + 选中造型的 tags`，画师单独放 `artist`；`personality` 仅供对话类下游参考。
+- 名称全库唯一（大小写不敏感，重名 409）；`tags` 保存时规范为 `a, b, c`（去空项、去重、去零宽字符）。
+- id 可省略（自动生成 `c_xxxxxxxx`），不能与 `schema` / `match` / `import` 重名。
+- `match` 要求 ASCII 名有词边界（`cy` 不命中 `cyan`）；某人设的全部命中都落在另一个人设更长的命中词里时丢弃（「Chaos前世」只命中别名为 `Chaos前世` 的那条）。
+
+**列表**（响应带 `revision` 与 `ETag: "chars-<revision>"`，可用 `If-None-Match` 拿 304）：
+
+```json
+{
+  "schema_version": 1, "revision": 12, "updated_at": 1790700000.0,
+  "total": 27, "characters": [ { 人设记录 } ]
+}
+```
+
+**匹配**：`POST /anima/characters/match`，请求 `{"text": "今天兔酱很开心", "limit": 10}`，响应 `{"matches": [{"id": "...", "name": "兔酱", "matched": "兔酱", "character": {...}}]}`（按首次出现位置排序）。
+
+**导入**：`POST /anima/characters/import`，请求 `{"characters": [...], "mode": "merge"}`。
+`merge` 先按 `id` 再按名称（大小写不敏感）匹配已有人设并部分更新，都没有则新建；`replace` 清空后整体写入，需额外传 `"confirm_replace": true`。响应 `{"ok": true, "created": [...], "updated": [...], "errors": [{"index", "name", "error"}], "revision", "total"}`。
+
+---
+
 ### Turbo v1.0 端点
 
 Turbo v1.0 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 `neg` 字段。

@@ -13,6 +13,14 @@ ComfyUI-AnimaTool：随 ComfyUI 启动的 Anima Tool Use API
   GET  /anima/schema_turbo_v1  - 返回 Turbo v1.0 Schema
   GET  /anima/schema_aesthetic_v1 - 返回 Aesthetic v1.0 Schema
   GET  /anima/knowledge_new_models - 返回新模型共享专家知识
+
+人设库（characters/，数据存 data/characters.json）：
+  GET    /anima/characters          - 人设列表（?q= / ?label= / ?nsfw=0，ETag 缓存校验）
+  POST   /anima/characters          - 新建人设
+  GET    /anima/characters/schema   - 人设记录 JSON Schema
+  POST   /anima/characters/match    - 文本按名称/别名匹配人设
+  POST   /anima/characters/import   - 批量导入（merge / replace）
+  GET|PUT|PATCH|DELETE /anima/characters/{id} - 单个人设读取/部分更新/删除
 """
 from __future__ import annotations
 
@@ -23,6 +31,8 @@ from pathlib import Path
 from aiohttp import web
 
 from .executor import AnimaExecutor, AnimaToolConfig
+from .characters import CharacterStore
+from .characters.routes import register_character_routes
 
 
 # ComfyUI 的 PromptServer（延迟导入，避免 import 顺序问题）
@@ -384,7 +394,13 @@ def _setup_routes():
     async def anima_knowledge_new_models(request):
         return _knowledge_response("turbo_v1")
 
-    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口)")
+    # -------------------------
+    # 人设库：/anima/characters*（Web 前端、机器人等下游共用）
+    # -------------------------
+    character_store = CharacterStore()
+    register_character_routes(routes, character_store)
+
+    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + ")")
 
 
 # ComfyUI 加载 custom_nodes 时会 import 这个模块

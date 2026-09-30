@@ -2,6 +2,9 @@
 outputs/
 examples/results/
 
+# 本地数据（人设库 data/characters.json 等，含私人设定，不进 git）
+data/
+
 # Local test artifacts（本地保留，不进 git；requests/ 与 loras/ 下的示例除外）
 examples/*
 !examples/requests/
