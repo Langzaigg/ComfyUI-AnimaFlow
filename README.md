@@ -11,6 +11,7 @@
 - **整合 Anima 2.9B 系列**：`anima29` 完整 UNET + `anima29_turbo`（Turbo LoRA，8 步）+ `fuse`（融合 UNET，8 步，内置文字类负面）+ `anima29_rdbt`（rdbt v2.0 双 LoRA，16 步）+ `aura` / `aura_speed`（Int8 量化，显存减半），质量与速度多档可选
 - **多工作流统一 API**：base / turbo 系 / 2.9B / Aura 等多模型，通过 `workflow` 参数切换
 - **工作流发现 API**：`GET /anima/workflows` 返回全部工作流的 schema、知识与弃用状态，下游服务启动时动态拉取即可，工作流增删改无需额外适配
+- **人设库 API**：`/anima/characters` 维护角色人设（外观标签、造型、画师、自然语言描述），支持文本按名称/别名匹配与批量导入，供 Web 画图前端、聊天机器人等下游共用；数据存本地 JSON 文件，含私人设定不进仓库
 - **三种接入方式**：MCP Server（图片原生显示在聊天窗口）、ComfyUI 内置 HTTP API、独立 FastAPI / CLI
 - **结构化提示词**：按各模型规范自动拼接（tag 系 / 自然语言系各自匹配）
 - **14 种长宽比预设**（21:9 ~ 9:21）、`repeat` / `batch_size` 批量生成、历史记录与 reroll
@@ -108,6 +109,8 @@ curl -X POST "http://127.0.0.1:8188/anima/generate" \
 - 名称全库唯一（大小写不敏感，重名 409）；`tags` 保存时规范为 `a, b, c`（去空项、去重、去零宽字符）。
 - `match`：ASCII 名要求词边界（`cy` 不命中 `cyan`），被其他人设更长的命中词完全覆盖时丢弃（「Chaos前世」只命中别名为 Chaos前世 的人设）。
 - 列表响应带 `revision`（每次写入 +1）与 `ETag: "chars-<revision>"`，下游可用 `If-None-Match` 低成本轮询。
+- 早期草案的 `notes`（绘制注意）在读取时并入 `description`，`personality` 不再维护（读取时丢弃）；客户端再传这两个字段会被忽略。
+- 该接口随 ComfyUI 插件注册在 `:8188`；方式 3 的独立 FastAPI 服务不提供人设库。
 
 ### 方式 3：独立 FastAPI / CLI
 
@@ -178,6 +181,7 @@ fuse v1.1 示例（10 步 cfg 1 Euler a 无负面）：
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | ComfyUI 地址（远程/Docker 时修改） |
 | `COMFYUI_MODELS_DIR` | - | models 根目录，启用模型预检查与 LoRA sidecar 列表 |
 | `ANIMATOOL_OUTPUT_DIR` | `./outputs` | 图片输出目录 |
+| `ANIMATOOL_CHARACTERS_FILE` | `<插件目录>/data/characters.json` | 人设库数据文件（含私人设定，已 gitignore） |
 | `ANIMATOOL_TIMEOUT` | `600` | 生成超时（秒） |
 | `ANIMATOOL_TARGET_MP` | `1.0` | 目标像素数（MP） |
 

@@ -312,13 +312,14 @@ MCP Server 返回：
   "tags": "rabbit girl, light brown hair, long hair, amber eyes, rabbit ears",
   "description": "浅茶色及腰长发，琥珀色眼睛，长兔耳……",
   "outfits": [{"name": "秋装", "tags": "white shirt, brown pinafore dress", "description": "", "default": true}],
-  "artist": "@makihitsuji", "notes": "夏装不戴礼帽", "personality": "说话俏皮利落",
+  "artist": "@makihitsuji",
   "labels": ["本家"], "nsfw": false, "source": "web", "extra": {},
   "created_at": 1790700000.0, "updated_at": 1790700000.0
 }
 ```
 
-- 画图只用外观字段：组合提示词 = `count + tag_name + series + tags + 选中造型的 tags`，画师单独放 `artist`；`personality` 仅供对话类下游参考。
+- 只存画图用的外观信息：组合提示词 = `count + tag_name + series + tags + 选中造型的 tags`，画师单独放 `artist`；自然语言只有 `description` 一个字段（外观描述，绘制注意/禁忌也写在这里），性格/称呼等对话设定不在人设库维护。
+- 早期草案的 `notes`（绘制注意）在读取时并入 `description`，`personality` 不再维护（读取时丢弃）；客户端再传这两个字段会被忽略。
 - 名称全库唯一（大小写不敏感，重名 409）；`tags` 保存时规范为 `a, b, c`（去空项、去重、去零宽字符）。
 - id 可省略（自动生成 `c_xxxxxxxx`），不能与 `schema` / `match` / `import` 重名。
 - `match` 要求 ASCII 名有词边界（`cy` 不命中 `cyan`）；某人设的全部命中都落在另一个人设更长的命中词里时丢弃（「Chaos前世」只命中别名为 `Chaos前世` 的那条）。
