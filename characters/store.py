@@ -11,8 +11,9 @@
 
 人设记录字段见 CHARACTER_JSON_SCHEMA（GET /anima/characters/schema 原样返回）。
 设计要点：
-- 画图只用外观字段：tag_name / series / count / tags / outfits / artist / notes；
-  personality 仅供对话类下游（如 QQ 机器人）参考，画图不使用。
+- 只存画图用的外观信息：tag_name / series / count / tags / outfits / artist，
+  自然语言只有 description 一个字段（外观描述，绘制注意也写在里面）；性格/称呼等对话设定不在人设库维护。
+  旧数据的 notes 读取时并入 description，personality 丢弃。
 - 基础 tags 只写本体特征（发型/瞳色/兽耳等），服装放 outfits（造型），
   组合时 = 基础 tags + 选中造型 tags；没有 outfits 时 tags 自带服装亦可。
 - 文件被外部改写（离线迁移/手工编辑）时按 mtime 自动重新加载，无需重启 ComfyUI。
@@ -41,8 +42,6 @@ _STR_FIELDS = {
     "tags": 4000,
     "description": 4000,
     "artist": 200,
-    "notes": 2000,
-    "personality": 2000,
     "source": 32,
 }
 # 逗号分隔的标签字段：保存时统一规范成 "a, b, c"（去空项、去重、去零宽字符）
@@ -63,7 +62,7 @@ _ASCII_ALNUM = re.compile(r"[A-Za-z0-9]")
 CHARACTER_JSON_SCHEMA: Dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "AnimaTool Character",
-    "description": "人设（角色）记录。画图只用外观字段；personality 仅供对话类下游参考。"
+    "description": "人设（角色）记录，只存画图用的外观信息；自然语言只有 description 一个字段。"
                    "组合提示词时 = count + tag_name + series + tags + 选中造型的 tags，画师单独放 artist。",
     "type": "object",
     "required": ["name"],
@@ -83,7 +82,8 @@ CHARACTER_JSON_SCHEMA: Dict[str, Any] = {
         "tags": {"type": "string", "maxLength": 4000,
                  "description": "基础外观 Danbooru 标签，逗号分隔（本体特征：发型/瞳色/兽耳/体型；有 outfits 时不写服装）"},
         "description": {"type": "string", "maxLength": 4000,
-                        "description": "中文外观描述（自然语言，给 LLM 参考）"},
+                        "description": "中文外观描述（唯一的自然语言字段，给 LLM 参考；绘制注意/禁忌也写在这里，"
+                                       "如 发型不要辫子、红晕只画在脸颊）"},
         "outfits": {
             "type": "array", "maxItems": _MAX_OUTFITS,
             "description": "造型（服装/季节装/形态变体），组合时 = 基础 tags + 造型 tags",
@@ -100,10 +100,6 @@ CHARACTER_JSON_SCHEMA: Dict[str, Any] = {
         },
         "artist": {"type": "string", "maxLength": 200,
                    "description": "偏好画师标签（带 @ 前缀，如 @makihitsuji）"},
-        "notes": {"type": "string", "maxLength": 2000,
-                  "description": "绘制注意事项/禁忌（如 发型不要辫子、红晕只画在脸颊）"},
-        "personality": {"type": "string", "maxLength": 2000,
-                        "description": "性格/称呼/行为设定（对话类下游参考，画图不使用）"},
         "labels": {"type": "array", "items": {"type": "string", "maxLength": 32}, "maxItems": 16,
                    "description": "分组标签（如 群友、原创、角色）"},
         "nsfw": {"type": "boolean", "description": "人设本身含 NSFW 内容（SFW 场景可据此过滤）"},
@@ -267,7 +263,7 @@ def _blank_record() -> Dict[str, Any]:
 def _ordered(rec: Dict[str, Any]) -> Dict[str, Any]:
     """固定输出字段顺序（文件可读性 + diff 友好）"""
     order = ["id", "name", "aliases", "tag_name", "series", "count", "tags", "description",
-             "outfits", "artist", "notes", "personality", "labels", "nsfw", "source", "extra",
+             "outfits", "artist", "labels", "nsfw", "source", "extra",
              "created_at", "updated_at"]
     return {k: rec[k] for k in order if k in rec}
 
@@ -396,6 +392,13 @@ class CharacterStore:
         if not rec["name"] and isinstance(raw.get("name"), (str, int, float)):
             # 名称超长等非法值被回落成空串，截断保留，避免这条记录再也无法更新
             rec["name"] = _ZERO_WIDTH_RE.sub("", str(raw["name"])).strip()[:_STR_FIELDS["name"]]
+        # 旧字段 notes（绘制注意）并入 description；旧字段 personality 不再维护，直接丢弃
+        legacy_notes = raw.get("notes")
+        if isinstance(legacy_notes, str):
+            legacy_notes = _ZERO_WIDTH_RE.sub("", legacy_notes).strip()
+            if legacy_notes and legacy_notes not in rec["description"]:
+                merged = f"{rec['description']}\n{legacy_notes}" if rec["description"] else legacy_notes
+                rec["description"] = merged[:_STR_FIELDS["description"]]
         rec["created_at"] = _as_number(raw.get("created_at"))
         rec["updated_at"] = _as_number(raw.get("updated_at"), rec["created_at"])
         return _ordered(rec)

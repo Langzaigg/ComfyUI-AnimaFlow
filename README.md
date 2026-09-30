@@ -96,15 +96,15 @@ curl -X POST "http://127.0.0.1:8188/anima/generate" \
   "id": "c_1a2b3c4d", "name": "兔酱", "aliases": ["兔兔"],
   "tag_name": "rabbit girl", "series": "original", "count": "1girl",
   "tags": "rabbit girl, light brown hair, long hair, amber eyes, rabbit ears",
-  "description": "浅茶色及腰长发，琥珀色眼眸，长兔耳……",
+  "description": "浅茶色及腰长发，琥珀色眼眸，长兔耳……夏装不戴礼帽。",
   "outfits": [{"name": "秋装", "tags": "white shirt, brown pinafore dress", "description": "", "default": true}],
-  "artist": "@makihitsuji", "notes": "夏装不戴礼帽", "personality": "说话傲娇利落",
+  "artist": "@makihitsuji",
   "labels": ["本家"], "nsfw": false, "source": "web", "extra": {},
   "created_at": 1790700000.0, "updated_at": 1790700000.0
 }
 ```
 
-- 画图只用外观字段：组合提示词 = `count + tag_name + series + tags + 选中造型的 tags`，画师放 `artist`；`personality` 仅供对话类下游参考。
+- 只存画图用的外观信息：组合提示词 = `count + tag_name + series + tags + 选中造型的 tags`，画师放 `artist`；自然语言只有 `description` 一个字段（外观描述，绘制注意也写在里面），性格/称呼等对话设定不在人设库维护。
 - 名称全库唯一（大小写不敏感，重名 409）；`tags` 保存时规范为 `a, b, c`（去空项、去重、去零宽字符）。
 - `match`：ASCII 名要求词边界（`cy` 不命中 `cyan`），被其他人设更长的命中词完全覆盖时丢弃（「Chaos前世」只命中别名为 Chaos前世 的人设）。
 - 列表响应带 `revision`（每次写入 +1）与 `ETag: "chars-<revision>"`，下游可用 `If-None-Match` 低成本轮询。
