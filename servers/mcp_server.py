@@ -158,6 +158,24 @@ LIST_HISTORY_SCHEMA = {
 }
 
 
+REVERSE_TAG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "image_path": {
+            "type": "string",
+            "description": "必选（与 image_base64 二选一）：本机图片文件路径。",
+        },
+        "image_base64": {
+            "type": "string",
+            "description": "必选（与 image_path 二选一）：base64 编码的图片（可带 data: 前缀）。",
+        },
+        "general_threshold": {"type": "number", "description": "可选：一般标签置信度阈值（默认 0.35）。"},
+        "character_threshold": {"type": "number", "description": "可选：角色标签置信度阈值（默认 0.75）。"},
+        "max_tags": {"type": "integer", "description": "可选：Anima 字段映射中最多保留的一般标签数（默认 40）。", "default": 40},
+    },
+}
+
+
 # reroll schema：source 必填 + generate 的所有参数可作为【可选覆盖项】
 # 关键：需要把原 generate 中"必选"的描述改为"可选覆盖"，否则 AI 会自动填入
 def _build_reroll_override_props() -> dict:
@@ -225,6 +243,16 @@ async def list_tools() -> list[Tool]:
                 "支持 repeat 参数一次提交多个独立任务。"
             ),
             inputSchema=REROLL_SCHEMA,
+        ),
+        Tool(
+            name="reverse_tag_image",
+            description=(
+                "图像反推：分析本地图片，返回 Danbooru 标签（分级/角色/一般）以及"
+                "映射好的 Anima 生成字段（quality_meta_year_safe/count/character/series/tags），"
+                "可直接作为 generate_anima_image 的参考。"
+                "模型固定为 wd-eva02-tagger-2026-canary，本地推理（XPU 加速或 CPU），不需要 ComfyUI 运行。"
+            ),
+            inputSchema=REVERSE_TAG_SCHEMA,
         ),
     ]
 
@@ -328,6 +356,21 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> Sequence[TextConten
         # ---- generate_anima_image ----
         if name == "generate_anima_image":
             return await _generate_with_repeat(executor, args)
+
+        # ---- reverse_tag_image ----
+        if name == "reverse_tag_image":
+            from tagger.service import TaggerError, decode_image, tag_image
+            try:
+                image = decode_image(args)
+                result = await asyncio.to_thread(
+                    tag_image, image,
+                    general_threshold=args.get("general_threshold"),
+                    character_threshold=args.get("character_threshold"),
+                    max_tags=int(args.get("max_tags") or 40),
+                )
+            except TaggerError as e:
+                return [TextContent(type="text", text=f"反推失败：{e.message}")]
+            return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
         return [TextContent(type="text", text=f"未知工具: {name}")]
 

@@ -3,9 +3,14 @@
 
 启动方式（在 ComfyUI-AnimaTool 目录下）：
     uvicorn servers.http_server:app --host 127.0.0.1 --port 8000
+
+图像反推（CPU 推理，不依赖 ComfyUI）：
+    GET  /tagger/models   反推模型列表及下载状态
+    POST /reverse_tag     图片反推 Danbooru 标签 + Anima 字段映射
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -23,6 +28,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from executor import AnimaExecutor, AnimaToolConfig
+from tagger.service import TaggerError, decode_image, list_models as list_tagger_models, tag_image
 
 
 class GenerateRequest(BaseModel):
@@ -35,6 +41,15 @@ class GenerateRequest(BaseModel):
 class RerollRequest(BaseModel):
     source: str = Field(..., description="历史记录引用：'last' 或历史 ID")
     overrides: Dict[str, Any] = Field(default_factory=dict, description="覆盖参数")
+
+
+class ReverseTagRequest(BaseModel):
+    image_base64: Optional[str] = Field(default=None, description="base64 图片（可带 data: 前缀）")
+    image_path: Optional[str] = Field(default=None, description="本机图片路径（与 image_base64 二选一）")
+    general_threshold: Optional[float] = Field(default=None, description="一般标签阈值（默认 0.35）")
+    character_threshold: Optional[float] = Field(default=None, description="角色标签阈值（默认 0.75）")
+    rating_threshold: Optional[float] = Field(default=None, description="分级标签阈值（默认 0.35）")
+    max_tags: int = Field(default=40, description="Anima 字段映射中最多保留的一般标签数")
 
 
 def _read_text(path: Path) -> str:
@@ -299,6 +314,29 @@ def create_app() -> FastAPI:
             "count": len(records),
             "records": [r.to_dict() for r in records],
         }
+
+    @app.get("/tagger/models")
+    def tagger_models() -> Dict[str, Any]:
+        return list_tagger_models()
+
+    @app.post("/reverse_tag")
+    async def reverse_tag(req: ReverseTagRequest) -> Dict[str, Any]:
+        try:
+            image = decode_image({k: v for k, v in {
+                "image_base64": req.image_base64, "image_path": req.image_path,
+            }.items() if v is not None})
+            result = await asyncio.to_thread(
+                tag_image, image,
+                general_threshold=req.general_threshold,
+                character_threshold=req.character_threshold,
+                rating_threshold=req.rating_threshold,
+                max_tags=req.max_tags,
+            )
+            return result
+        except TaggerError as e:
+            raise HTTPException(status_code=e.status, detail=e.message) from e
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     @app.post("/reroll")
     def reroll(req: RerollRequest) -> Dict[str, Any]:

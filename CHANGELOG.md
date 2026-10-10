@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **图像反推接口（2026-10-10）**: 新增 `tagger/` 包（`core.py` timm/WD14 系推理核心；`service.py` 懒加载 + 线程安全缓存 + Anima 字段映射；`routes.py` aiohttp 路由；`download.py` 模型下载 CLI `python -m tagger.download`），模型固定 [wd-eva02-tagger-2026-canary](https://huggingface.co/ashen-sensored/wd-eva02-tagger-2026-canary)（Danbooru 标签 16,473 个，含 2024-07 后新角色），本地推理不经过 ComfyUI 后端（Intel XPU 可用时自动加速，可用 `ANIMA_TAGGER_DEVICE` 覆盖；CPU 单张约 3.5s）。三端接口：ComfyUI 路由 `GET /anima/tagger/models` + `POST /anima/reverse_tag`（image_base64 / image_path，阈值可调，返回标签 + `anima` 字段映射），FastAPI 独立服务 `GET /tagger/models` + `POST /reverse_tag`，MCP 工具 `reverse_tag_image`。字段映射：rating → `quality_meta_year_safe`（general→safe / questionable→nsfw 等）、人数标签 → `count`、角色（去下划线）→ `character`、括号作品 → `series`、一般标签 → `tags`。对比测试脚本 `examples/reverse_tag/run_test.py`（复用 anima29 横评 8 图，报告存 `examples/results/reverse_tag_*`）。模型文件存 `model_repos/huggingface/`（约 1.3GB，已在 gitignore）。
+
 - **人设库 `/anima/characters`（2026-09-30）**: 新增 `characters/` 包（`store.py` JSON 文件存储：进程内锁 + 原子写 + `.bak` + 按 mtime 自动重载 + revision/ETag；`routes.py` aiohttp 路由），接口 `GET|POST /anima/characters`、`GET|PUT|PATCH|DELETE /anima/characters/{id}`、`POST /anima/characters/match`、`POST /anima/characters/import`（merge / replace）、`GET /anima/characters/schema`。人设字段：name/aliases/tag_name/series/count/tags/description/outfits/artist/labels/nsfw/source/extra（自然语言只有 description 一个字段，绘制注意也写在里面；早期草案的 notes 读取时并入 description，personality 丢弃）。数据默认存 `data/characters.json`（新增 gitignore，含私人设定不进仓库），可用 `ANIMATOOL_CHARACTERS_FILE` 覆盖。供 Web 画图前端与聊天机器人等下游共用。
+
+### Changed
+
+- **requirements.txt**: `mcp` 固定 `<2`（mcp 2.x 移除了 `Server.list_tools/call_tool` 装饰器 API）；新增反推依赖 `timm`。
 
 - **fuse 1.1 / Turbo LoRA 1.1 横评与转正（2026-09-18）**: `examples/anima29_newmodels_test.py` + 融合/重映射脚本 `merge_sm29t_fuse_turbo.py` / `merge_sm29_fuse_turbo.py` / `merge_fuse29aes_turbo.py` / `remap_turbo_v4_lora_29b.py`，14 场景（含新单人例 s11_tuchan_autumn / s12_tuchan_coat 兔酱秋装）× 多模型同 seed 横评。结论：silvermoon29_turbo × turbo1.1 融合比例 0.3 为甜区（3.5 第一/2 垫底），改走旧 fuse 参数（8 步 cfg1.2+文字负面）无稳定收益；r030 + silvermoon_turbo 官方参数（10 步 cfg1 euler a+normal 无负面）转正为新 fuse。报告：`examples/results/anima29_newmodels_20260918_101609/report.md`。
 - **fuse v1.1 工作流**: `fuse` 预设换用融合 UNET `anima29b-sm29t-fuse1.1.safetensors`（[SilvermoonMix Anima Evolved](https://civitai.com/models/2639339/silvermoonmix-anima-evolved) v2329B Turbo × anima-turbo-v1.1 按 0.3/0.7 加权，非官方衍生），采样 10 步、cfg 固定 1.0、Euler a + normal、无负面；`knowledge/fuse_expert.md` 与 `schemas/tool_schema_fuse.json` 重写（neg 字段改为惰性说明，cfg 字段移除）。

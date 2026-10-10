@@ -8,7 +8,8 @@
 
 ```bash
 # 使用 ComfyUI 的 Python 环境
-pip install mcp
+# 注意必须装 1.x：mcp 2.x 移除了 Server 装饰器 API
+pip install "mcp>=1.0,<2"
 ```
 
 ### 2. 配置 Cursor

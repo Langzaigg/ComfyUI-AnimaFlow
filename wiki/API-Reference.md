@@ -118,6 +118,43 @@ MCP Server 返回：
 
 ---
 
+### reverse_tag_image
+
+图像反推：分析本地图片，返回 Danbooru 标签（分级/角色/一般）及映射好的 Anima 生成字段，可直接作为 `generate_anima_image` 的参考。本地推理（XPU 可用时自动加速，否则 CPU 单张约 3.5s），不需要 ComfyUI 后端运行。
+
+模型固定为 [wd-eva02-tagger-2026-canary](https://huggingface.co/ashen-sensored/wd-eva02-tagger-2026-canary)（Danbooru 标准标签 16,473 个，含 2024-07 后新角色），首次使用前下载：
+
+```bash
+python -m tagger.download
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `image_path` | string | 二选一 | 本机图片文件路径 |
+| `image_base64` | string | 二选一 | base64 编码图片（可带 `data:` 前缀） |
+| `general_threshold` | number | 否 | 一般标签阈值（默认 0.35） |
+| `character_threshold` | number | 否 | 角色标签阈值（默认 0.75） |
+| `max_tags` | integer | 否 | Anima 字段映射中最多保留的一般标签数（默认 40） |
+
+#### 返回
+
+JSON 文本：`rating` / `character` / `general`（含置信度）、`character_top5`（含低于阈值的候选）、`seconds`，以及 `anima` 字段映射：
+
+```json
+"anima": {
+  "quality_meta_year_safe": "safe",
+  "count": "1girl",
+  "character": "senko (sewayaki kitsune no senko-san)",
+  "series": "sewayaki kitsune no senko-san",
+  "tags": "tail, animal_ears, fox_tail, blue_eyes, ..."
+}
+```
+
+> 分级映射：`general→safe`、`sensitive→sensitive`、`questionable→nsfw`、`explicit→explicit`。
+> 角色/作品标签已按 Anima 规范去除下划线；`series` 取自角色标签的括号部分。
+
+---
+
 ## ComfyUI HTTP API
 
 随 ComfyUI 启动自动注册以下路由。
@@ -340,6 +377,44 @@ MCP Server 返回：
 
 ---
 
+### 图像反推 `/anima/reverse_tag`
+
+本地反推图片为 Danbooru 标签（模型固定 [wd-eva02-tagger-2026-canary](https://huggingface.co/ashen-sensored/wd-eva02-tagger-2026-canary)，timm 原生权重；XPU 可用时自动加速，否则 CPU 单张约 3.5s），不经过 ComfyUI 后端。首次使用前下载模型：`python -m tagger.download`。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/anima/tagger/models` | 模型信息与下载状态 |
+| POST | `/anima/reverse_tag` | 反推图片 → 标签 + Anima 字段映射 |
+
+**请求**（`image_base64` 与 `image_path` 二选一）：
+
+```json
+{
+  "image_path": "D:/path/to/image.png",
+  "general_threshold": 0.35,
+  "character_threshold": 0.75,
+  "max_tags": 40
+}
+```
+
+**响应**：`success` / `device` / `seconds` / `rating` / `character` / `general` / `character_top5`，以及映射好的 `anima` 字段（`quality_meta_year_safe` / `count` / `character` / `series` / `tags`，可直接作为 `/anima/generate` payload 的参考）。分级映射：`general→safe`、`sensitive→sensitive`、`questionable→nsfw`、`explicit→explicit`。
+
+```json
+{
+  "success": true, "model": "canary", "device": "xpu", "seconds": 0.22,
+  "rating": {"general": 0.98},
+  "character": {"senko_(sewayaki_kitsune_no_senko-san)": 0.99},
+  "anima": {
+    "quality_meta_year_safe": "safe", "count": "1girl",
+    "character": "senko (sewayaki kitsune no senko-san)",
+    "series": "sewayaki kitsune no senko-san",
+    "tags": "tail, animal_ears, fox_tail, blue_eyes, ..."
+  }
+}
+```
+
+---
+
 ### Turbo v1.0 端点
 
 Turbo v1.0 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 `neg` 字段。
@@ -475,6 +550,8 @@ python -m servers.http_server
 | `/generate` | POST | 执行生成（支持 repeat；`?workflow=` 或 body 中 `workflow` 字段选择工作流，缺省 base） |
 | `/history` | GET | 查看生成历史 |
 | `/reroll` | POST | 基于历史重新生成 |
+| `/tagger/models` | GET | 反推模型信息与下载状态 |
+| `/reverse_tag` | POST | 图像反推（字段同 ComfyUI 路由 `/anima/reverse_tag`） |
 | `/docs` | GET | Swagger UI |
 
 ### Swagger UI

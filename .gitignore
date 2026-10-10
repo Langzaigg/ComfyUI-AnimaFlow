@@ -9,6 +9,10 @@ data/
 examples/*
 !examples/requests/
 !examples/loras/
+!examples/reverse_tag/
+
+# 反推模型权重（约 1.3GB，用 python -m tagger.download 下载）
+model_repos/
 
 # Agent workspace
 .workbuddy/

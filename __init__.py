@@ -21,6 +21,10 @@ ComfyUI-AnimaTool：随 ComfyUI 启动的 Anima Tool Use API
   POST   /anima/characters/match    - 文本按名称/别名匹配人设
   POST   /anima/characters/import   - 批量导入（merge / replace）
   GET|PUT|PATCH|DELETE /anima/characters/{id} - 单个人设读取/部分更新/删除
+
+图像反推（tagger/，CPU 推理，不经过 ComfyUI 后端）：
+  GET  /anima/tagger/models    - 反推模型列表及下载状态
+  POST /anima/reverse_tag      - 图片反推 Danbooru 标签 + Anima 字段映射
 """
 from __future__ import annotations
 
@@ -33,6 +37,7 @@ from aiohttp import web
 from .executor import AnimaExecutor, AnimaToolConfig
 from .characters import CharacterStore
 from .characters.routes import register_character_routes
+from .tagger.routes import register_tagger_routes
 
 
 # ComfyUI 的 PromptServer（延迟导入，避免 import 顺序问题）
@@ -400,7 +405,12 @@ def _setup_routes():
     character_store = CharacterStore()
     register_character_routes(routes, character_store)
 
-    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + ")")
+    # -------------------------
+    # 图像反推：/anima/reverse_tag（CPU 推理，不经过 ComfyUI 后端）
+    # -------------------------
+    register_tagger_routes(routes)
+
+    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + "), /anima/tagger/models, /anima/reverse_tag (图像反推)")
 
 
 # ComfyUI 加载 custom_nodes 时会 import 这个模块

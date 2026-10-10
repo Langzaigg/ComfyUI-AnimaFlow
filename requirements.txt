@@ -7,4 +7,10 @@ pydantic>=2.6
 requests>=2.31
 
 # MCP Server（原生图片返回）
-mcp>=1.0.0
+# 注意：代码使用 mcp 1.x 的 Server 装饰器 API，mcp 2.x 已移除该 API
+mcp>=1.0.0,<2
+
+# 图像反推（/anima/reverse_tag、POST /reverse_tag、MCP reverse_tag_image）
+# 模型固定 wd-eva02-tagger-2026-canary（timm 格式）：timm + torch（ComfyUI 环境自带 torch；
+# Intel XPU 可用时自动用 XPU 加速，可用 ANIMA_TAGGER_DEVICE=cpu 强制 CPU）
+timm>=1.0
