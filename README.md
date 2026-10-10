@@ -12,6 +12,7 @@
 - **多工作流统一 API**：base / turbo 系 / 2.9B / Aura 等多模型，通过 `workflow` 参数切换
 - **工作流发现 API**：`GET /anima/workflows` 返回全部工作流的 schema、知识与弃用状态，下游服务启动时动态拉取即可，工作流增删改无需额外适配
 - **人设库 API**：`/anima/characters` 维护角色人设（外观标签、造型、画师、自然语言描述），支持文本按名称/别名匹配与批量导入，供 Web 画图前端、聊天机器人等下游共用；数据存本地 JSON 文件，含私人设定不进仓库
+- **图像反推 API**：`/anima/reverse_tag` 把参考图反推为 Danbooru 标签 + 映射好的 Anima 生成字段（分级/人数/角色/作品/标签），本地推理不占 ComfyUI 后端，XPU/CUDA 自动加速
 - **三种接入方式**：MCP Server（图片原生显示在聊天窗口）、ComfyUI 内置 HTTP API、独立 FastAPI / CLI
 - **结构化提示词**：按各模型规范自动拼接（tag 系 / 自然语言系各自匹配）
 - **14 种长宽比预设**（21:9 ~ 9:21）、`repeat` / `batch_size` 批量生成、历史记录与 reroll
@@ -79,6 +80,8 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `/anima/characters/match` | POST | 文本按名称/别名匹配人设 `{text, limit}` |
 | `/anima/characters/import` | POST | 批量导入 `{characters, mode: merge\|replace}` |
 | `/anima/characters/schema` | GET | 人设记录 JSON Schema |
+| `/anima/tagger/models` | GET | 反推模型信息与下载状态 |
+| `/anima/reverse_tag` | POST | 图像反推（见下文「图像反推」） |
 
 ```bash
 curl -X POST "http://127.0.0.1:8188/anima/generate" \
@@ -119,6 +122,56 @@ pip install fastapi uvicorn
 python -m servers.http_server   # http://127.0.0.1:8000/docs
 python -m servers.cli --help
 ```
+
+### 图像反推（`/anima/reverse_tag`）
+
+把参考图反推为 Danbooru 标签，并直接映射成 Anima 生成字段（`quality_meta_year_safe` / `count` / `character` / `series` / `tags`），可作为生成参数的底稿。推理在插件进程内本地执行（torch + timm），**不经过 ComfyUI 后端队列**；检测到 Intel XPU / CUDA 时自动用 GPU 加速（XPU 预热后约 0.2s/张），否则 CPU 约 3.5s/张。
+
+**部署**（首次使用需下载模型，约 1.3GB）：
+
+```bash
+# 用 ComfyUI 的 Python 环境执行
+cd ComfyUI/custom_nodes/ComfyUI-AnimaFlow
+pip install timm                      # 或 pip install -r requirements.txt
+python -m tagger.download             # 下载 wd-eva02-tagger-2026-canary 到 model_repos/huggingface/
+```
+
+模型固定为 [wd-eva02-tagger-2026-canary](https://huggingface.co/ashen-sensored/wd-eva02-tagger-2026-canary)（EVA02-Large，Danbooru 标准标签 16,473 个，覆盖 2024-07 之后的新角色/新标签）。国内下载可走镜像 `HF_ENDPOINT=https://hf-mirror.com` 或代理 `HTTPS_PROXY=http://127.0.0.1:7890`。
+
+**调用**（三端等价）：
+
+```bash
+# ComfyUI 内置路由（随 ComfyUI 启动）
+curl -X POST http://127.0.0.1:8188/anima/reverse_tag \
+  -H "Content-Type: application/json" \
+  -d '{"image_path": "D:/path/to/image.png"}'
+
+# 独立 FastAPI 服务
+curl -X POST http://127.0.0.1:8000/reverse_tag \
+  -H "Content-Type: application/json" \
+  -d '{"image_base64": "<base64 图片>"}'
+```
+
+MCP 客户端直接让 AI 调用 `reverse_tag_image` 工具（`image_path` / `image_base64` 二选一）。
+
+**响应节选**：
+
+```json
+{
+  "success": true, "model": "canary", "device": "xpu", "seconds": 0.22,
+  "rating": {"general": 0.98},
+  "character": {"senko_(sewayaki_kitsune_no_senko-san)": 0.99},
+  "anima": {
+    "quality_meta_year_safe": "safe",
+    "count": "1girl",
+    "character": "senko (sewayaki kitsune no senko-san)",
+    "series": "sewayaki kitsune no senko-san",
+    "tags": "tail, animal_ears, fox_tail, blue_eyes, ..."
+  }
+}
+```
+
+可选参数：`general_threshold`（默认 0.35）、`character_threshold`（默认 0.75）、`rating_threshold`（默认 0.35）、`max_tags`（映射进 `tags` 的一般标签上限，默认 40）。分级映射 `general→safe` / `sensitive→sensitive` / `questionable→nsfw` / `explicit→explicit`；角色/作品标签已按 Anima 规范去下划线。完整字段说明见 [wiki/API-Reference.md](wiki/API-Reference.md)。
 
 ## 工作流一览
 
@@ -184,6 +237,7 @@ fuse v1.1 示例（10 步 cfg 1 Euler a 无负面）：
 | `ANIMATOOL_CHARACTERS_FILE` | `<插件目录>/data/characters.json` | 人设库数据文件（含私人设定，已 gitignore） |
 | `ANIMATOOL_TIMEOUT` | `600` | 生成超时（秒） |
 | `ANIMATOOL_TARGET_MP` | `1.0` | 目标像素数（MP） |
+| `ANIMA_TAGGER_DEVICE` | 自动（XPU > CUDA > CPU） | 图像反推推理设备，可填 `cpu` / `xpu` / `cuda` 强制指定 |
 
 完整配置与远程部署说明见 wiki。
 

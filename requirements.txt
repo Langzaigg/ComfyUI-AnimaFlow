@@ -1,4 +1,5 @@
-# 仅独立服务需要（ComfyUI extension 模式不需要额外依赖）
+# ComfyUI 插件模式：torch/numpy/PIL 由 ComfyUI 环境自带，图像反推另需 timm（见文末）
+# 独立服务（FastAPI / MCP / CLI）需要以下全部依赖
 
 # FastAPI 服务
 fastapi>=0.110
