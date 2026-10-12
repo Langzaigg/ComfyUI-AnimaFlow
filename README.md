@@ -40,7 +40,7 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
 
-模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)，fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)。各工作流对应的具体模型文件见其 schema / knowledge 文档。
+模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）与 fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)；fuse v1.1 / Turbo LoRA v1.1 存档于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（已废弃）。各工作流对应的具体模型文件见其 schema / knowledge 文档。
 
 ## 使用
 
