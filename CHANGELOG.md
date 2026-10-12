@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **fuse v1.2 衍生模型发布（2026-10-12）**: `fuse` 预设换用融合 UNET `anima29b-sm29t-fuse1.2.safetensors`（fuse v1.1 融合 NextGen 2.9bV1 LoRA@0.3，`examples/merge_fuse_nextgen_1_2.py` 本地生成）。横评 `examples/nextgen_lora_strength_test.py`：0.2/0.3/0.6 三强度 × 8 场景（4 SFW + 4 NSFW）同 seed 对照，结论——NSFW 解剖部位清晰度/准确度随强度提升、无打码/审查倾向，SFW 构图与人物遵循全部无带偏；0.3 为甜区（0.6 偶发非指令小道具、阴影偏移略增）。采样参数不变（10 步、cfg 固定 1.0、Euler a + normal、无负面），烟测见 `outputs/2026-10/Fuse12Smoke_*`。
+
+- **测试场景库变更（2026-10-12）**: 移除 s6_holo_onsen（赫萝温泉）；新增 s13_wolf_archer（@makihitsuji 白毛狼娘传统木弓箭右搭拇指射法瞄准镜头，fuse 两轮探针调稳，examples/fuse_bow_prompt_probe_test.py）与 s14_yukikaze_defeated（@makihitsuji 大破雪风战败牢房奴役，用户提供提示词）。
+
+- **knowledge NSFW 提示词建议（2026-10-12）**: 全部现役 expert 文档补 NSFW 写法——正面强调 `uncensored, detailed anatomy`；cfg>1 的模型负面追加审查类词 `censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`（fuse cfg 固定 1.0 负面惰性，仅正向规避）。
+
 - **图像反推接口（2026-10-10）**: 新增 `tagger/` 包（`core.py` timm/WD14 系推理核心；`service.py` 懒加载 + 线程安全缓存 + Anima 字段映射；`routes.py` aiohttp 路由；`download.py` 模型下载 CLI `python -m tagger.download`），模型固定 [wd-eva02-tagger-2026-canary](https://huggingface.co/ashen-sensored/wd-eva02-tagger-2026-canary)（Danbooru 标签 16,473 个，含 2024-07 后新角色），本地推理不经过 ComfyUI 后端（Intel XPU 可用时自动加速，可用 `ANIMA_TAGGER_DEVICE` 覆盖；CPU 单张约 3.5s）。三端接口：ComfyUI 路由 `GET /anima/tagger/models` + `POST /anima/reverse_tag`（image_base64 / image_path，阈值可调，返回标签 + `anima` 字段映射），FastAPI 独立服务 `GET /tagger/models` + `POST /reverse_tag`，MCP 工具 `reverse_tag_image`。字段映射：rating → `quality_meta_year_safe`（general→safe / questionable→nsfw 等）、人数标签 → `count`、角色（去下划线）→ `character`、括号作品 → `series`、一般标签 → `tags`。对比测试脚本 `examples/reverse_tag/run_test.py`（复用 anima29 横评 8 图，报告存 `examples/results/reverse_tag_*`）。模型文件存 `model_repos/huggingface/`（约 1.3GB，已在 gitignore）。
 
 - **人设库 `/anima/characters`（2026-09-30）**: 新增 `characters/` 包（`store.py` JSON 文件存储：进程内锁 + 原子写 + `.bak` + 按 mtime 自动重载 + revision/ETag；`routes.py` aiohttp 路由），接口 `GET|POST /anima/characters`、`GET|PUT|PATCH|DELETE /anima/characters/{id}`、`POST /anima/characters/match`、`POST /anima/characters/import`（merge / replace）、`GET /anima/characters/schema`。人设字段：name/aliases/tag_name/series/count/tags/description/outfits/artist/labels/nsfw/source/extra（自然语言只有 description 一个字段，绘制注意也写在里面；早期草案的 notes 读取时并入 description，personality 丢弃）。数据默认存 `data/characters.json`（新增 gitignore，含私人设定不进仓库），可用 `ANIMATOOL_CHARACTERS_FILE` 覆盖。供 Web 画图前端与聊天机器人等下游共用。

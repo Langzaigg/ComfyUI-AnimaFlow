@@ -58,3 +58,4 @@ score 越高越精致；降到 `score_6, score_7` 会略偏"动漫感"。改 sco
 
 - 衣物/招牌上偶尔自发出现乱码文字，在意时负面写 `text, watermark, logo, signature`（默认以 cfg 1.2 生效）。
 - 写实风下去掉画师 tag 更稳；画面会被强画师风格接管。
+- NSFW 提示词：正面强调 `uncensored, detailed anatomy`；有打码/审查倾向时把审查类词写进 `neg`（默认以 cfg 1.2 生效）：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。

@@ -182,8 +182,8 @@ _V2_MODEL_PRESETS = {
         "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_turbo_v1_",
     },
-    # fuse：silvermoonmixAnima_v2329BTurbo × turbo 1.1 按 0.3/0.7 加权融合的 UNET
-    # anima29b-sm29t-fuse1.1；沿用 silvermoon turbo 官方参数（Euler a + normal，10 步）。
+    # fuse：anima29b-sm29t-fuse1.2（v1.1 融合 UNET + NextGen 2.9bV1 LoRA@0.3）；
+    # 沿用 silvermoon turbo 官方参数（Euler a + normal，10 步）。
     # cfg 固定 1.0（负面惰性），官方建议无负面，故无 default_negative。
     "fuse": {
         "unet": FUSE_UNET_NAME, "steps": FUSE_STEPS, "cfg": 1.0,

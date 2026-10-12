@@ -1,6 +1,6 @@
 # Fuse（Silvermoon29 Turbo × Anima Turbo 1.1 融合模型）提示词规范
 
-Fuse v1.1（`anima29b-sm29t-fuse1.1`）：silvermoonmixAnima_v2329BTurbo 与 anima-turbo-v1.1 按 0.3/0.7 加权融合（非官方衍生）。
+Fuse v1.2（`anima29b-sm29t-fuse1.2`）：fuse v1.1（silvermoonmixAnima_v2329BTurbo × anima-turbo-v1.1 按 0.3/0.7 加权融合，非官方衍生）融合 NextGen 2.9bV1 LoRA@0.3。v1.1 本体见下。
 原始出处：SilvermoonMix Anima Evolved <https://civitai.com/models/2639339/silvermoonmix-anima-evolved>。
 turbo 提示词体系：质量词有效，字段写法与 turbo_v1 一致；采样为 Euler a + normal 8-12 步（默认 10），cfg 固定 1.0。
 
@@ -30,6 +30,10 @@ steps 8-12（默认 10），cfg 固定 1.0，Euler a + normal，无负面。
 ## 负面提示词
 
 不使用负面（cfg 固定 1.0，负面惰性）。不想要的场景元素用正向写法规避：不要提及（模型常把否定词也当成概念引入），用正向描述替代（如要干净背景就写 `simple background`）。
+
+## NSFW 提示词
+
+正面 `tags` 中强调 `uncensored, detailed anatomy`。cfg 固定 1.0 负面不进采样，审查类负面词不可用，出现打码/审查倾向只能靠正向写法（直接写清裸露细节与无遮挡）或换 seed 规避。
 
 ## 模型限制
 

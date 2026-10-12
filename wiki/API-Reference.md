@@ -167,7 +167,7 @@ JSON 文本：`rating` / `character` / `general`（含置信度）、`character_
 |----------|------|
 | `base`（缺省） | Base 1.0：完整字段工作流 |
 | `turbo_v1` | Turbo 1.0（实为 1.1）：独立完整 UNET 快速生成 |
-| `fuse` | Fuse v1.1：Silvermoon29 Turbo × turbo 1.1 融合 UNET 快速生成（cfg 固定 1，无负面，Euler a，steps 8-12 默认 10） |
+| `fuse` | Fuse v1.2：Silvermoon29 Turbo × turbo 1.1 融合 UNET + NextGen 2.9bV1 LoRA@0.3 快速生成（cfg 固定 1，无负面，Euler a，steps 8-12 默认 10） |
 | `fuse1.0`（已过期） | Fuse v1.0：turbo 1.1 × Anima 2.9B P1 融合 UNET（内置文字类负面，默认 cfg 1.2） |
 | `aesthetic_v1` | Aesthetic 1.0：高质量微调完整 UNET |
 | `ultrareal` | UltraReal (UltraReal_FineTune_Anima_base1_v3)：真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式） |

@@ -14,6 +14,8 @@
 
 **负面首选正向写法规避**：不想要的元素不要提及（模型常把否定词也当成概念引入），用正向描述替代（如要干净背景就写 `simple background`，或直接描述想要的场景本身）。正向写法管不住的元素（假签名、水印、logo 类伪影）写进 `neg`，填写后默认以 cfg 1.2 采样、负面生效（cfg 可调 1.0-1.6）。
 
+**NSFW 提示词**：正面 `tags` 中强调 `uncensored, detailed anatomy`；有打码/审查倾向时把审查类词写进 `neg`（默认以 cfg 1.2 生效）：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。
+
 ## 自然语言技巧
 
 - 角色名/系列名遵循标准英文大小写

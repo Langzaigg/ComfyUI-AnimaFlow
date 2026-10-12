@@ -43,6 +43,8 @@
 
 官方建议从无负面开始（示例图均无负面生成）。`neg` 留空即不使用负面；若手动填写则生效。
 
+**NSFW 提示词**：正面 `tags` 中强调 `uncensored, detailed anatomy`；有打码/审查倾向时 `neg` 填写审查类词（cfg 4-5 负面生效）：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。
+
 ## 模型限制
 
 不支持生成文字/LOGO/UI/界面/对话框/气泡。`tags` 中禁止出现 text, sign, letter, ui, interface, hud, menu, button, dialog, speech bubble, thought bubble, logo 等词。

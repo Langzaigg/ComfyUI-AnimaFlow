@@ -33,6 +33,7 @@
 - 手脚易崩：正面可加 `fingernails` / `fingers`；负面细列 bad hands / missing fingers / extra fingers / malformed limbs / bad feet
 - 负面量大管饱，细分常见崩坏
 - 兽耳娘负面加 `anthro`
+- NSFW 正面强调 `uncensored, detailed anatomy`；负面追加审查类词：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`
 - 权重需高：`(chibi:2)` 而非 `(chibi:1.1)`
 - 标签差异优先 Gelbooru 版本
 - 角色名/系列名遵循标准英文大小写：`Hatsune Miku (Vocaloid)`、`Fern (Sousou no Frieren)`

@@ -40,7 +40,7 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `anima29B_v10.safetensors` | `models/diffusion_models/` | anima29 系 / aura 系底座 |
 | `anima-turbo-v1.1.safetensors` | `models/diffusion_models/` | turbo_v1 |
 | `anima-aesthetic-v1.1.safetensors` | `models/diffusion_models/` | aesthetic_v1 |
-| `anima29b-sm29t-fuse1.1.safetensors` | `models/diffusion_models/` | fuse（融合 UNET v1.1，非官方融合衍生） |
+| `anima29b-sm29t-fuse1.2.safetensors` | `models/diffusion_models/` | fuse（融合 UNET v1.2：v1.1 融合 NextGen 2.9bV1 LoRA@0.3，非官方衍生） |
 | `anima29b-p1-turbo1.1.safetensors` | `models/diffusion_models/` | fuse1.0（已过期，融合 UNET v1.0） |
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo（强度 0.8，免补丁重映射版） |
 | `rdbt_v2.0_base_anima2.9b_p1_lora.safetensors` + `rdbt_v2.0_distilled_addon_anima2.9b_p1_lora.safetensors` | `models/loras/` | anima29_rdbt（双 LoRA 串联） |

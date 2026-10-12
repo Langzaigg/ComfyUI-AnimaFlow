@@ -47,6 +47,8 @@
 
 默认已内置：`score_1, score_2, score_3, score_4, worst quality, low quality, blurry, jpeg artifacts, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo` + 安全对立约束（正面 @sfw → 负面自动加 @nsfw，反之亦然）。
 
+**NSFW 提示词**（`@nsfw`）：正面 `nltags` 中强调 `uncensored, detailed anatomy`；负面已内置 `censored, mosaic`，可补全审查类词：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。
+
 ## 采样参数（可选）
 
 - `sampler_name` / `scheduler`：默认 `er_sde` + `simple`，不要改。

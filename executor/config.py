@@ -85,12 +85,11 @@ ANIMA29_CFG = 4.0
 ANIMA29_TURBO_LORA_NAME = "anima29b-turbolora1.1.safetensors"
 ANIMA29_TURBO_STEPS = 8
 
-# Fuse v1.1：silvermoonmixAnima_v2329BTurbo 与 anima-turbo-v1.1 按 0.3/0.7 加权融合
-# （见 examples/merge_sm29t_fuse_turbo.py；silvermoon 出自
-# https://civitai.com/models/2639339/silvermoonmix-anima-evolved）。
-# 横评（examples/results/anima29_newmodels_20260918_101609/report.md）：0.3 为甜区，
+# Fuse v1.2：fuse v1.1 UNET 融合 NextGen 2.9bV1 LoRA@0.3（16.5 NextGen 2.9bV1，
+# 见 examples/merge_fuse_nextgen_1_2.py 与 examples/nextgen_lora_strength_test.py 横评：
+# 0.3 为甜区——NSFW 解剖清晰度/准确度提升，SFW 构图与人物遵循无带偏）。
 # 采样沿用 silvermoon turbo 官方参数（Euler a + normal，CFG 固定 1，10 步，无负面）。
-FUSE_UNET_NAME = "anima29b-sm29t-fuse1.1.safetensors"
+FUSE_UNET_NAME = "anima29b-sm29t-fuse1.2.safetensors"
 FUSE_SAMPLER = ("euler_ancestral", "normal")
 FUSE_STEPS = 10
 

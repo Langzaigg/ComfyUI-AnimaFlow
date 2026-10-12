@@ -38,6 +38,8 @@ steps 8-12（默认 8），cfg 1.0-1.6（无 neg 默认 1.0，填写 neg 后默�
 
 正向写法管不住的元素（如角落假签名、水印、logo 类伪影）写进 `neg`：填写后默认以 cfg 1.2 采样、负面生效；cfg 可在 1.0-1.6 内显式调整。
 
+**NSFW 提示词**：正面 `tags` 中强调 `uncensored, detailed anatomy`；有打码/审查倾向时把审查类词写进 `neg`（默认以 cfg 1.2 生效）：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。
+
 ## 模型限制
 
 不支持生成文字/LOGO/UI/对话框/气泡。`tags` 中禁止 text, sign, letter, ui, interface, hud, menu, button, dialog, speech bubble, thought bubble, logo。

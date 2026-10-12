@@ -14,6 +14,8 @@
 
 默认负面：`worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo`
 
+**NSFW 提示词**：正面 `tags` 中强调 `uncensored, detailed anatomy`；`neg` 追加审查类词（cfg>1 负面正常生效；默认负面在 explicit 时已含 censored/mosaic，补全其余）：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。
+
 ## 自然语言技巧
 
 - 角色名/系列名遵循标准英文大小写

@@ -8,7 +8,7 @@
 
 ## 特性
 
-- **整合 Anima 2.9B 系列**：`anima29` 完整 UNET + `anima29_turbo`（Turbo LoRA，8 步）+ `fuse`（融合 UNET，8 步，内置文字类负面）+ `anima29_rdbt`（rdbt v2.0 双 LoRA，16 步）+ `aura` / `aura_speed`（Int8 量化，显存减半），质量与速度多档可选
+- **整合 Anima 2.9B 系列**：`anima29` 完整 UNET + `anima29_turbo`（Turbo LoRA，8 步）+ `fuse`（融合 UNET，10 步，cfg 固定 1.0 无负面）+ `anima29_rdbt`（rdbt v2.0 双 LoRA，16 步）+ `aura` / `aura_speed`（Int8 量化，显存减半），质量与速度多档可选
 - **多工作流统一 API**：base / turbo 系 / 2.9B / Aura 等多模型，通过 `workflow` 参数切换
 - **工作流发现 API**：`GET /anima/workflows` 返回全部工作流的 schema、知识与弃用状态，下游服务启动时动态拉取即可，工作流增删改无需额外适配
 - **人设库 API**：`/anima/characters` 维护角色人设（外观标签、造型、画师、自然语言描述），支持文本按名称/别名匹配与批量导入，供 Web 画图前端、聊天机器人等下游共用；数据存本地 JSON 文件，含私人设定不进仓库
@@ -35,12 +35,12 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 |------|------|------|
 | `anima-preview.safetensors` | `models/diffusion_models/` | Anima base UNET |
 | `anima29B_v10.safetensors` | `models/diffusion_models/` | Anima 2.9B UNET |
-| `anima29b-sm29t-fuse1.1.safetensors` | `models/diffusion_models/` | fuse 融合 UNET v1.1（非官方融合衍生；旧版 fuse1.0 对应 `anima29b-p1-turbo1.1.safetensors`，已过期） |
+| `anima29b-sm29t-fuse1.2.safetensors` | `models/diffusion_models/` | fuse 融合 UNET v1.2（v1.1 融合 NextGen 2.9bV1 LoRA@0.3，非官方衍生；旧版 v1.1 = `anima29b-sm29t-fuse1.1.safetensors`，fuse1.0 对应 `anima29b-p1-turbo1.1.safetensors`，已过期） |
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo 的 Turbo LoRA v1.1（强度 0.8，免补丁重映射版，非官方衍生） |
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
 
-模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：v1.1（现行）发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)，v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)。各工作流对应的具体模型文件见其 schema / knowledge 文档。
+模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：v1.1 发布于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)，v1.2（现行，v1.1 + NextGen 2.9bV1 LoRA@0.3 融合，`examples/merge_fuse_nextgen_1_2.py` 本地生成，待发布 HF）与 v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)。各工作流对应的具体模型文件见其 schema / knowledge 文档。
 
 ## 使用
 
@@ -180,7 +180,7 @@ MCP 客户端直接让 AI 调用 `reverse_tag_image` 工具（`image_path` / `im
 | 工作流 | 说明 |
 |--------|------|
 | `anima29_turbo` | Anima 2.9B + Turbo LoRA v1.1（默认 8 步）——速度优先推荐 |
-| `fuse` | Silvermoon29 Turbo × turbo 1.1 融合 UNET v1.1（默认 10 步，cfg 固定 1，Euler a，无负面） |
+| `fuse` | Silvermoon29 Turbo × turbo 1.1 融合 UNET v1.2（v1.1 + NextGen 2.9bV1 LoRA@0.3；默认 10 步，cfg 固定 1，Euler a，无负面） |
 | `fuse1.0` | （已过期）turbo × Anima 2.9B 融合 UNET v1.0（默认 8 步，内置文字类负面） |
 | `anima29_rdbt` | Anima 2.9B + rdbt v2.0 双 LoRA（默认 16 步）——质量/速度均衡最优 |
 | `anima29` | Anima 2.9B 完整 UNET（cfg 3.5-5，默认 30 步）——质量优先 |
@@ -203,9 +203,9 @@ MCP 客户端直接让 AI 调用 `reverse_tag_image` 工具（`image_path` / `im
 - `anima29`：质量天花板。cfg>1 负面提示词正常生效，细节刻画与复杂构图最好；代价是 30 步起步、BF16 显存约 16GB。适合最终成稿。
 - `anima29_rdbt`：双 LoRA 蒸馏加速，16 步实测追平甚至反超 anima29 的 30 步，细节保留完整，是 2.9 系**性价比最优**的日常选择。
 - `anima29_turbo`：8 步出图，速度最快档。负面首选**正向写法**规避；管不住的元素写 `neg`（默认以 cfg 1.2 生效），不写 neg 时默认 cfg 1.0。适合快速迭代、聊天实时出图。
-- `fuse`：Silvermoon29 Turbo 与 turbo 1.1 的融合 UNET v1.1，10 步 Euler a + normal，cfg 固定 1、无负面；提示词走 turbo 体系（质量词有效）。旧版 v1.0（turbo × Anima 2.9B，8 步，内置文字类负面）保留为已过期的 `fuse1.0`。
+- `fuse`：Silvermoon29 Turbo 与 turbo 1.1 的融合 UNET，10 步 Euler a + normal，cfg 固定 1、无负面；提示词走 turbo 体系（质量词有效）。现行 v1.2 在 v1.1 上融合 NextGen 2.9bV1 LoRA@0.3（NSFW 解剖细节提升，SFW 无带偏，见 `examples/nextgen_lora_strength_test.py` 横评）；旧版 v1.0（turbo × Anima 2.9B，8 步，内置文字类负面）保留为已过期的 `fuse1.0`。
 
-fuse v1.1 示例（10 步 cfg 1 Euler a 无负面）：
+fuse 示例（v1.1 时期出图；v1.2 沿用同采样参数，仅融合 NextGen LoRA）：
 
 ![Fuse v1.1 示例：野餐](assets/example_fuse11_picnic.png)
 ![Fuse v1.1 示例：兔酱秋装](assets/example_fuse11_tuchan_autumn.png)

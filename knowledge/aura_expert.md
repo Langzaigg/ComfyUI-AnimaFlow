@@ -17,6 +17,8 @@ AuraAnima 2.9B qpolaP101 Int8 W8a8 量化模型（3.46 GB）：Anima 2.9B 的量
 
 默认负面：`worst quality, low quality, artist name, blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, bad feet, extra fingers, missing fingers, text, watermark, logo`
 
+**NSFW 提示词**：正面 `tags` 中强调 `uncensored, detailed anatomy`；`neg` 追加审查类词（cfg>1 负面正常生效；默认负面在 explicit 时已含 censored/mosaic，补全其余）：`censored, mosaic, mosaic censoring, bar censor, black bar, pixelated, censored genitalia`。
+
 ## 多角色
 
 - `appearance` 必须留空
