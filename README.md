@@ -39,6 +39,7 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo 的 Turbo LoRA v1.1（强度 0.8，免补丁重映射版，非官方衍生） |
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
+| `moss_image_sft_turbo_int8_convrot_aio.safetensors` | `models/checkpoints/` | MOSS-Image Turbo AIO（独立接口 `/moss/*`，单文件含 DiT + TE + VAE） |
 
 模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）与 fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)；fuse v1.1 / Turbo LoRA v1.1 存档于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（已废弃）。各工作流对应的具体模型文件见其 schema / knowledge 文档。
 
@@ -88,6 +89,43 @@ curl -X POST "http://127.0.0.1:8188/anima/generate" \
   -H "Content-Type: application/json" \
   -d '{"workflow":"anima29_turbo","aspect_ratio":"3:4","count":"1girl","tags":"white dress, smile, garden"}'
 ```
+
+#### MOSS-Image（独立接口 `/moss/*`）
+
+MOSS-Image 是 OpenMOSS 的 5B DiT，提示词是 **Layout JSON**（整体描述 + 每个角色/物件/文字的像素框位），
+和 Anima 系的 tag 字段不是一回事，所以**没有并进上面的 workflow 注册表**，而是单独一组接口：
+
+| 路由 | 方法 | 说明 |
+|------|------|------|
+| `/moss/info` | GET | 模型文件、官方推荐采样参数、接口清单 |
+| `/moss/schema` | GET | Tool Schema（`prompt` + `elements` 结构化框位） |
+| `/moss/knowledge` | GET | 专家知识（框位规则、文字渲染、分格写法、示例） |
+| `/moss/generate` | POST | 生成（Layout JSON 或纯 caption） |
+
+```bash
+# 四格漫画：prompt 描述整页，elements 给出每格与每句台词的位置
+curl -X POST "http://127.0.0.1:8188/moss/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A four-panel black-and-white manga page in a 2x2 grid with thick black panel borders.",
+    "canvas": "multi_panel",
+    "width": 1536, "height": 1024,
+    "elements": [
+      {"label": "object", "caption": "Top-left panel: a tired programmer at a desk lit by a monitor error dialog.", "bbox": [56, 56, 748, 492]},
+      {"label": "text", "caption": "Hand-lettered Chinese in a white speech bubble.", "text": "又崩了…", "bbox": [110, 80, 520, 190]}
+    ]
+  }'
+```
+
+- 框位用**画布左上角原点的像素** `[x1, y1, x2, y2]`，服务端换算成模型要求的 `abs_centralized` / `yxyx`。
+- 要渲染的字必须放在 `elements[].text`（`label: "text"`）；宽高是 16 的倍数，约 1MP 最稳。
+- 官方推荐 8 步 / CFG 1 / `euler` + `simple`，无负面；不写 `elements` 时退化为纯文本提示词。
+- **参考图**：`reference_image`（单张）/ `reference_images`（最多 4 张）。
+  MOSS 的 Qwen3.5 文本编码器是多模态的，参考图走 TE 的视觉分支（`TextEncodeMingImageEdit`），
+  提示词里自动补 `Picture N: <|vision_start|><|image_pad|><|vision_end|>` 占位符，每张缩到约 384²；
+  不带 VAE latent，属于「带参考的生图」而非身份锁定，主体外观仍要写进 `prompt` 与 `caption`。
+- 也接受官方 prompt skill 的草稿格式（`summary` + `items`），字段名会自动归一。
+- 独立 FastAPI（方式 3）与 MCP（`generate_moss_image` 工具）提供同样的能力。
 
 #### 人设库（`/anima/characters`）
 

@@ -28,7 +28,15 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from executor import AnimaExecutor, AnimaToolConfig
+from executor.config import MOSS_CKPT_NAME, MOSS_CFG, MOSS_SAMPLER, MOSS_STEPS
 from tagger.service import TaggerError, decode_image, list_models as list_tagger_models, tag_image
+
+# MOSS-Image 独立接口的 schema / knowledge 文件名（与 ComfyUI 路由 __init__.py 保持一致）
+MOSS_SCHEMA_FILE = "tool_schema_moss.json"
+MOSS_KNOWLEDGE = {
+    "moss_expert": "moss_expert.md",
+    "moss_examples": "moss_examples.md",
+}
 
 
 class GenerateRequest(BaseModel):
@@ -260,6 +268,55 @@ def create_app() -> FastAPI:
                 for name, info in WORKFLOWS.items()
             },
         }
+
+    # -------------------------
+    # MOSS-Image 独立接口：/moss/*（Layout JSON 提示词，不进上面的 WORKFLOWS 注册表）
+    # -------------------------
+    @app.get("/moss/info")
+    def moss_info() -> Dict[str, Any]:
+        return {
+            "workflow": "moss",
+            "description": "MOSS-Image 图像生成（Layout JSON 提示词 + 中英文字面文字渲染，原生分格控制）",
+            "model": {
+                "checkpoint": MOSS_CKPT_NAME,
+                "path": "models/checkpoints/",
+            },
+            "prompt_format": "layout_json",
+            "sampling": {
+                "steps": MOSS_STEPS,
+                "cfg": MOSS_CFG,
+                "sampler_name": MOSS_SAMPLER[0],
+                "scheduler": MOSS_SAMPLER[1],
+                "denoise": 1.0,
+                "shift": 5,
+            },
+            "endpoints": {
+                "generate": "POST /moss/generate",
+                "schema": "GET /moss/schema",
+                "knowledge": "GET /moss/knowledge",
+            },
+        }
+
+    @app.get("/moss/schema")
+    def moss_schema() -> JSONResponse:
+        schema_path = _SCHEMA_DIR / MOSS_SCHEMA_FILE
+        if not schema_path.exists():
+            raise HTTPException(status_code=404, detail=f"schema not found: {MOSS_SCHEMA_FILE}")
+        return JSONResponse(content=json.loads(schema_path.read_text(encoding="utf-8")))
+
+    @app.get("/moss/knowledge")
+    def moss_knowledge() -> Dict[str, Any]:
+        return {key: _read_text(_KNOWLEDGE_DIR / filename) for key, filename in MOSS_KNOWLEDGE.items()}
+
+    @app.post("/moss/generate")
+    async def moss_generate(body: Dict[str, Any]) -> Dict[str, Any]:
+        payload = body["payload"] if isinstance(body.get("payload"), dict) else body
+        try:
+            return await asyncio.to_thread(executor.generate_moss, payload)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     @app.get("/schema")
     def schema(workflow: Optional[str] = Query(default=None)) -> JSONResponse:

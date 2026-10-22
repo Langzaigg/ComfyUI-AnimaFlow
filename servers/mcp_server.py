@@ -34,6 +34,12 @@ from mcp.types import (
 from executor import AnimaExecutor, AnimaToolConfig
 
 
+# MOSS-Image 独立接口（/moss/*）的 tool 入参 schema：与 HTTP 接口共用同一份文件
+_SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
+with (_SCHEMA_DIR / "tool_schema_moss.json").open("r", encoding="utf-8") as _f:
+    MOSS_TOOL_SCHEMA = json.load(_f)["parameters"]
+
+
 # 创建 MCP Server
 server = Server("anima-tool")
 
@@ -245,6 +251,16 @@ async def list_tools() -> list[Tool]:
             inputSchema=REROLL_SCHEMA,
         ),
         Tool(
+            name="generate_moss_image",
+            description=(
+                "用 MOSS-Image 生成带 Layout 框位控制的图片（漫画分格、海报、贴纸文案、UI 稿）。"
+                "prompt 描述整体画面，elements 给出角色/物件/文字的像素框位；"
+                "要渲染的字必须放在 elements[].text 里。提示词是 Layout 结构，"
+                "与 generate_anima_image 的 tag 体系无关，不要混用字段。"
+            ),
+            inputSchema=MOSS_TOOL_SCHEMA,
+        ),
+        Tool(
             name="reverse_tag_image",
             description=(
                 "图像反推：分析本地图片，返回 Danbooru 标签（分级/角色/一般）以及"
@@ -260,10 +276,17 @@ async def list_tools() -> list[Tool]:
 async def _generate_with_repeat(
     executor: "AnimaExecutor",
     prompt_json: Dict[str, Any],
+    generate_fn=None,
+    reroll_hint: bool = True,
 ) -> list[TextContent | ImageContent]:
-    """执行生成（支持 repeat 多次独立 queue 提交），返回 MCP 内容列表。"""
+    """执行生成（支持 repeat 多次独立 queue 提交），返回 MCP 内容列表。
+
+    generate_fn 指定具体生成入口（缺省 executor.generate）；MOSS 走 executor.generate_moss，
+    它的历史记录与 Anima 分开存，所以 reroll_hint 要关掉。
+    """
     from copy import deepcopy
 
+    generate_fn = generate_fn or executor.generate
     repeat = max(1, int(prompt_json.pop("repeat", 1) or 1))
     # batch_size 留在 prompt_json 中，由 executor._inject() 处理
 
@@ -276,7 +299,7 @@ async def _generate_with_repeat(
         if "seed" not in prompt_json or prompt_json.get("seed") is None:
             run_params.pop("seed", None)
 
-        result = await asyncio.to_thread(executor.generate, run_params)
+        result = await asyncio.to_thread(generate_fn, run_params)
 
         if not result.get("success"):
             all_contents.append(TextContent(type="text", text=f"第 {i+1}/{repeat} 次生成失败: {result}"))
@@ -299,7 +322,7 @@ async def _generate_with_repeat(
         all_contents.append(TextContent(type="text", text="生成完成，但没有产出图片。"))
 
     # 追加历史 ID 提示，让 AI 自然知道可以 reroll
-    if history_ids:
+    if history_ids and reroll_hint:
         ids_str = ", ".join(f"#{hid}" for hid in history_ids)
         hint = f"已保存为历史记录 {ids_str}。可用 reroll_anima_image(source=\"{history_ids[-1]}\") 或 reroll_anima_image(source=\"last\") 重新生成。"
         all_contents.append(TextContent(type="text", text=hint))
@@ -356,6 +379,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> Sequence[TextConten
         # ---- generate_anima_image ----
         if name == "generate_anima_image":
             return await _generate_with_repeat(executor, args)
+
+        # ---- generate_moss_image（独立接口：Layout JSON 提示词，历史与 Anima 分开）----
+        if name == "generate_moss_image":
+            return await _generate_with_repeat(
+                executor, args, generate_fn=executor.generate_moss, reroll_hint=False
+            )
 
         # ---- reverse_tag_image ----
         if name == "reverse_tag_image":

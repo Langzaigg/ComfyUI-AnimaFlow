@@ -127,6 +127,14 @@ CYBERREAL_SAMPLER = ("euler", None)
 CYBERREAL_STEPS = 10
 CYBERREAL_CFG = 1.0
 
+# MOSS-Image SFT Turbo INT8 ConvRot AIO（单文件 checkpoint：DiT + Qwen3.5-9B TE + FLUX.2 VAE）
+# 独立接口 /moss/*，不进 Anima 工作流注册表：提示词是 Layout JSON，不是 tag 系写法。
+# 官方推荐：CFG 1、8 步、euler + simple、无负面；分辨率约 1MP 且宽高为 16 的倍数。
+MOSS_CKPT_NAME = "moss_image_sft_turbo_int8_convrot_aio.safetensors"
+MOSS_SAMPLER = ("euler", "simple")
+MOSS_STEPS = 8
+MOSS_CFG = 1.0
+
 
 @dataclass
 class AnimaToolConfig:

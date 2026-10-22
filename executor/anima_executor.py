@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import math
 import os
+import shutil
 import time
 import uuid
 from datetime import datetime
@@ -14,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, MOSS_CKPT_NAME, MOSS_SAMPLER, MOSS_STEPS, MOSS_CFG
 from .history import HistoryManager
 
 logger = logging.getLogger("anima_tool")
@@ -264,6 +266,144 @@ _V2_MODEL_PRESETS = {
 }
 
 
+# MOSS-Image 预设：单文件 checkpoint（DiT + TE + VAE），无 LoRA 槽位，也不进 _V2_MODEL_PRESETS。
+# 官方推荐 8 步 / CFG 1 / euler + simple / 无负面；cfg 上限 1.6 只给显式写 neg 的实验场景。
+_MOSS_PRESET = {
+    "ckpt": MOSS_CKPT_NAME, "steps": MOSS_STEPS, "cfg": MOSS_CFG,
+    "steps_range": (4, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
+    "sampler": MOSS_SAMPLER[0], "scheduler": MOSS_SAMPLER[1], "prefix": "MOSS_",
+}
+
+# MOSS Layout 的合法标签，与官方 compile_prompt.py 一致
+_MOSS_LABELS = ("object", "character", "text")
+
+
+def _moss_centered_box(box: Any, width: int, height: int, location: str) -> List[int]:
+    """
+    草稿的顶左像素框 [x1, y1, x2, y2] → 模型要求的中心原点 yxyx 框。
+
+    换算与官方 compile_prompt.py 完全一致：先向外取整成像素边界，再减去画布中心。
+    """
+    if not isinstance(box, (list, tuple)) or len(box) != 4:
+        raise ValueError(f"{location} 必须是 [x1, y1, x2, y2] 四个数")
+    try:
+        x1, y1, x2, y2 = (float(v) for v in box)
+    except (TypeError, ValueError):
+        raise ValueError(f"{location} 必须是 [x1, y1, x2, y2] 四个数") from None
+    if not all(math.isfinite(v) for v in (x1, y1, x2, y2)):
+        raise ValueError(f"{location} 含非法数值")
+    if not (x1 < x2 and y1 < y2):
+        raise ValueError(f"{location} 的宽高必须为正")
+    if not (0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height):
+        raise ValueError(f"{location} 超出 {width}x{height} 画布")
+    return [
+        math.floor(round(y1, 9)) - height // 2,
+        math.floor(round(x1, 9)) - width // 2,
+        math.ceil(round(y2, 9)) - height // 2,
+        math.ceil(round(x2, 9)) - width // 2,
+    ]
+
+
+def normalize_moss_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    兼容官方 prompt skill 的草稿格式：`summary` + `items` 直接当入参。
+
+    官方 compile_prompt.py 的草稿是 {width, height, bbox_coord_space, bbox_format,
+    summary{caption,meta,canvas}, items[...]}，与 /moss/generate 的 prompt + elements
+    只差一层字段名，这里统一成后者的形状再编译。
+    """
+    if payload.get("prompt") or not isinstance(payload.get("summary"), dict):
+        return payload
+    summary = payload["summary"]
+    merged = dict(payload)
+    merged["prompt"] = summary.get("caption", "")
+    if summary.get("canvas"):
+        merged["canvas"] = summary["canvas"]
+    if summary.get("meta"):
+        merged["meta"] = summary["meta"]
+    if payload.get("items") and not payload.get("elements"):
+        merged["elements"] = payload["items"]
+    return merged
+
+
+def compile_moss_layout(prompt_json: Dict[str, Any], width: int, height: int) -> str:
+    """
+    把 Layout 草稿编译成 MOSS-Image 的单行 Layout JSON 提示词。
+
+    入参字段（见 schemas/tool_schema_moss.json）：
+    - prompt：整体画面描述 → summary.caption
+    - meta：媒介/体裁标签数组 → summary.meta
+    - canvas：single / multi_panel / collage → summary.canvas
+    - elements：items 数组，每项 {label, caption, bbox, text?, tags?, palette?}，
+      bbox 用画布左上角为原点的像素 xyxy
+
+    没有 elements 时退化为纯文本 caption 提示词（模型同样接受自然语言）。
+    """
+    caption = str(prompt_json.get("prompt") or "").strip()
+    if not caption:
+        raise ValueError("prompt 不能为空（作为 summary.caption）")
+
+    elements = prompt_json.get("elements") or []
+    if not isinstance(elements, list):
+        raise ValueError("elements 必须是数组")
+    if not elements:
+        return caption
+
+    summary: Dict[str, Any] = {}
+    meta = prompt_json.get("meta")
+    if meta:
+        if not isinstance(meta, list) or not all(isinstance(m, str) and m.strip() for m in meta):
+            raise ValueError("meta 必须是非空字符串数组")
+        summary["meta"] = list(meta)
+
+    canvas = str(prompt_json.get("canvas") or "").strip()
+    if canvas:
+        if canvas not in ("single", "multi_panel", "collage"):
+            raise ValueError("canvas 只能是 single / multi_panel / collage")
+        summary["canvas"] = canvas
+    summary["caption"] = caption
+
+    items: List[Dict[str, Any]] = []
+    for index, element in enumerate(elements):
+        location = f"elements[{index}]"
+        if not isinstance(element, dict):
+            raise ValueError(f"{location} 必须是对象")
+        label = str(element.get("label") or "").strip()
+        if label not in _MOSS_LABELS:
+            raise ValueError(f"{location}.label 只能是 object / character / text")
+        item_caption = str(element.get("caption") or "").strip()
+        if not item_caption:
+            raise ValueError(f"{location}.caption 不能为空")
+        if "bbox" not in element:
+            raise ValueError(f"{location}.bbox 不能为空")
+
+        item: Dict[str, Any] = {"label": label, "caption": item_caption}
+        if label == "text":
+            literal = element.get("text")
+            if not isinstance(literal, str) or not literal.strip():
+                raise ValueError(f"{location} 是 text 元素，必须给 text（要渲染的字面文字）")
+            item["text"] = literal
+        elif element.get("text"):
+            # 只有 text 元素渲染字面文字；其他标签带 text 是误用，直接报错而不是静默丢弃
+            raise ValueError(f"{location}.text 仅 text 元素可用（当前 label={label}）")
+        for key in ("tags", "palette"):
+            values = element.get(key)
+            if values:
+                if not isinstance(values, list) or not all(isinstance(v, str) and v.strip() for v in values):
+                    raise ValueError(f"{location}.{key} 必须是非空字符串数组")
+                item[key] = list(values)
+        item["bbox"] = _moss_centered_box(element["bbox"], width, height, f"{location}.bbox")
+        items.append(item)
+
+    layout = {
+        "summary": summary,
+        "items": items,
+        "bbox_coord_space": "abs_centralized",
+        "bbox_format": "yxyx",
+    }
+    return json.dumps(layout, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
 @dataclass(frozen=True)
 class GeneratedImage:
     filename: str
@@ -308,6 +448,11 @@ class AnimaExecutor:
         unified_template_path = Path(__file__).resolve().parent / "workflow_template_unified.json"
         with unified_template_path.open("r", encoding="utf-8") as f:
             self._workflow_template_unified: Dict[str, Any] = json.load(f)
+
+        # MOSS-Image 单文件 checkpoint 模板（独立接口 /moss/*，节点 id 与统一模板对齐）
+        moss_template_path = Path(__file__).resolve().parent / "workflow_template_moss.json"
+        with moss_template_path.open("r", encoding="utf-8") as f:
+            self._workflow_template_moss: Dict[str, Any] = json.load(f)
 
         # 生成历史管理器
         self.history = HistoryManager()
@@ -741,6 +886,140 @@ class AnimaExecutor:
         wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or preset["prefix"])
 
         return wf
+
+    def _inject_moss(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        MOSS-Image（单文件 checkpoint，独立接口 /moss/*）工作流注入。
+
+        提示词是 Layout JSON 而不是 tag 系写法：prompt + elements 由 compile_moss_layout
+        编译成模型要求的 summary + items + abs_centralized/yxyx 单行 JSON；
+        只给 prompt 时退化为纯文本 caption。
+        """
+        preset = _MOSS_PRESET
+        prompt_json = normalize_moss_payload(prompt_json)
+        wf = deepcopy(self._workflow_template_moss)
+
+        wf["1"]["inputs"]["ckpt_name"] = str(prompt_json.get("ckpt_name") or preset["ckpt"])
+
+        # 分辨率：MOSS 要求宽高为 16 的倍数，官方建议约 1MP
+        width = prompt_json.get("width")
+        height = prompt_json.get("height")
+        aspect_ratio = (prompt_json.get("aspect_ratio") or "").strip()
+        if (width is None or height is None) and aspect_ratio:
+            width, height = estimate_size_from_ratio(
+                aspect_ratio=aspect_ratio,
+                target_megapixels=float(prompt_json.get("target_megapixels") or self.config.target_megapixels),
+                round_to=16,
+            )
+        elif width is not None and height is not None:
+            width = align_dimension(int(width), 16)
+            height = align_dimension(int(height), 16)
+        if width is None or height is None:
+            width, height = 1024, 1024
+        width, height = int(width), int(height)
+
+        # Layout 的框位是像素坐标，必须等宽高确定后再编译
+        positive = str(prompt_json.get("positive") or "").strip()
+        if not positive:
+            positive = compile_moss_layout(prompt_json, width, height)
+        negative = str(prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
+
+        # 参考图：送到文本编码器的视觉分支（MOSS 的 Qwen3.5 TE 是多模态的），
+        # 不走 VAE latent。Qwen 对话模板要求显式图像占位符，每张一行 Picture N。
+        refs = prompt_json.get("reference_images") or []
+        if isinstance(refs, str):
+            refs = [refs]
+        single = str(prompt_json.get("reference_image") or "").strip()
+        if single:
+            refs = [single] + [r for r in refs if str(r).strip() != single]
+        refs = [str(r).strip() for r in refs if str(r).strip()][:4]
+        if refs:
+            prefix = "\n".join(
+                f"Picture {index}: <|vision_start|><|image_pad|><|vision_end|>"
+                for index in range(1, len(refs) + 1)
+            )
+            wf["6"] = {
+                "class_type": "TextEncodeMingImageEdit",
+                "inputs": {"clip": ["1", 1], "prompt": prefix + "\n\n" + positive},
+            }
+            for index, name in enumerate(refs, 1):
+                source, scaled = str(20 + index), str(30 + index)
+                wf[source] = {"class_type": "LoadImage", "inputs": {"image": self._resolve_reference_image(name)}}
+                # 每张缩到约 384²（0.147456 MP），保留各自比例
+                wf[scaled] = {"class_type": "ImageScaleToTotalPixels", "inputs": {
+                    "image": [source, 0], "upscale_method": "area",
+                    "megapixels": 0.147456, "resolution_steps": 1,
+                }}
+                wf["6"]["inputs"][f"images.image_{index}"] = [scaled, 0]
+            wf["19"]["inputs"]["positive"] = ["6", 0]
+
+        wf["11"]["inputs"]["text"] = positive
+        wf["12"]["inputs"]["text"] = negative
+        wf["28"]["inputs"]["width"] = width
+        wf["28"]["inputs"]["height"] = height
+        wf["28"]["inputs"]["batch_size"] = int(prompt_json.get("batch_size") or 1)
+
+        seed = prompt_json.get("seed")
+        if seed is None:
+            seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
+        wf["19"]["inputs"]["seed"] = int(seed)
+
+        # 采样参数：官方推荐 8 步 / CFG 1 / euler + simple
+        steps = int(prompt_json.get("steps") or preset["steps"])
+        lo, hi = preset["steps_range"]
+        wf["19"]["inputs"]["steps"] = max(lo, min(hi, steps))
+
+        cfg_value = prompt_json.get("cfg")
+        if cfg_value is None:
+            # cfg 1 时负面不进采样；显式写 neg 才抬到 cfg_neg 让负面生效
+            cfg_value = preset["cfg_neg"] if negative else preset["cfg"]
+        cfg_lo, cfg_hi = preset["cfg_range"]
+        wf["19"]["inputs"]["cfg"] = max(cfg_lo, min(cfg_hi, float(cfg_value)))
+
+        wf["19"]["inputs"]["sampler_name"] = str(prompt_json.get("sampler_name") or preset["sampler"])
+        scheduler = prompt_json.get("scheduler") or preset["scheduler"]
+        if scheduler:
+            wf["19"]["inputs"]["scheduler"] = str(scheduler)
+        denoise = prompt_json.get("denoise")
+        if denoise is not None:
+            wf["19"]["inputs"]["denoise"] = max(0.2, min(1.0, float(denoise)))
+
+        wf["52"]["inputs"]["filename_prefix"] = str(prompt_json.get("filename_prefix") or preset["prefix"])
+
+        return wf
+
+    def _resolve_reference_image(self, name: str) -> str:
+        """
+        解析参考图为 ComfyUI input 目录里的文件名。
+
+        LoadImage 只接受 input 目录内的文件（有目录穿越校验），所以本机绝对路径会先
+        按内容哈希复制进 input 目录；远端 ComfyUI 请自行上传后直接传文件名。
+        """
+        value = str(name).strip()
+        if not value:
+            raise ValueError("reference_image 不能为空")
+        if not os.path.isabs(value):
+            return value
+
+        path = Path(value)
+        if not path.is_file():
+            raise ValueError(f"参考图不存在：{value}")
+        digest = hashlib.md5(path.read_bytes()).hexdigest()[:8]
+        target = self._comfyui_input_dir() / f"{path.stem}_{digest}{path.suffix}"
+        if not target.exists():
+            shutil.copyfile(path, target)
+        return target.name
+
+    def _comfyui_input_dir(self) -> Path:
+        """ComfyUI 的 input 目录（LoadImage 的唯一可读目录）。"""
+        try:
+            import folder_paths
+
+            return Path(folder_paths.get_input_directory())
+        except Exception:
+            if self.config.comfyui_models_dir:
+                return Path(self.config.comfyui_models_dir).parent / "input"
+        raise ValueError("定位不到 ComfyUI input 目录，请先把参考图上传到 input 目录再传文件名")
 
     def _inject_ultrareal(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -1441,6 +1720,83 @@ class AnimaExecutor:
             seed=actual_seed,
             width=actual_width,
             height=actual_height,
+        )
+        result["history_id"] = record.id
+
+        return result
+
+    def generate_moss(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        MOSS-Image 生成入口（独立接口 /moss/generate，Layout JSON 提示词而非 tag 串）。
+
+        参数：
+        - prompt：整体画面描述（必填，编译进 summary.caption）
+        - elements：Layout 元素数组 [{label, caption, bbox, text?, tags?, palette?}]，
+          bbox 为画布左上角原点的像素 xyxy，服务端换算成模型要求的中心原点 yxyx
+        - canvas / meta：summary.canvas（single/multi_panel/collage）/ summary.meta
+        - 其余：width / height / aspect_ratio / steps / cfg / seed / batch_size / filename_prefix
+        """
+        prompt = self._inject_moss(prompt_json)
+        payload = normalize_moss_payload(prompt_json)
+
+        # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
+        self._maybe_clean_comfyui_output()
+        prompt_id = self.queue_prompt(prompt)
+        history_item = self.wait_history(prompt_id)
+        images = self._extract_images(prompt_id, history_item)
+        images = self._download_images(images)
+
+        images_data = []
+        for im in images:
+            mime_type = self._get_mime_type(im.filename)
+            b64 = base64.b64encode(im.content).decode("ascii") if im.content else None
+
+            img_info = {
+                "filename": im.filename,
+                "subfolder": im.subfolder,
+                "type": im.folder_type,
+                "url": im.view_url,
+                "view_url": im.view_url,
+                "file_path": im.saved_path,
+                "saved_path": im.saved_path,
+                "base64": b64,
+                "mime_type": mime_type,
+                "data_url": f"data:{mime_type};base64,{b64}" if b64 else None,
+                "markdown": f"![{im.filename}]({im.view_url})",
+            }
+            images_data.append(img_info)
+
+        # 参考图模式下正向条件来自 TextEncodeMingImageEdit(6)，其 prompt 字段带 Picture 占位符
+        positive_node = prompt["19"]["inputs"]["positive"][0]
+        actual_positive = (
+            prompt[positive_node]["inputs"].get("prompt")
+            or prompt[positive_node]["inputs"].get("text", "")
+        )
+        result = {
+            "success": True,
+            "mode": "moss",
+            "prompt_format": "layout" if payload.get("elements") else "caption",
+            "prompt_id": prompt_id,
+            "positive": actual_positive,
+            "negative": prompt["12"]["inputs"]["text"],
+            "seed": int(prompt["19"]["inputs"]["seed"]),
+            "width": int(prompt["28"]["inputs"]["width"]),
+            "height": int(prompt["28"]["inputs"]["height"]),
+            "reference_images": [
+                node["inputs"]["image"] for node in prompt.values()
+                if node.get("class_type") == "LoadImage"
+            ],
+            "images": images_data,
+        }
+
+        record = self.history.add(
+            params=payload,
+            positive_text=actual_positive,
+            negative_text=result["negative"],
+            prompt_id=prompt_id,
+            seed=result["seed"],
+            width=result["width"],
+            height=result["height"],
         )
         result["history_id"] = record.id
 

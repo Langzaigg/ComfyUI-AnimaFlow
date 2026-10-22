@@ -192,6 +192,15 @@ WORKFLOWS = {
 
 DEFAULT_WORKFLOW = "base"
 
+# MOSS-Image 独立接口（/moss/*）：刻意不进上面的 WORKFLOWS 注册表。
+# 它的提示词是 Layout JSON（summary + items + 框位），不是 tag 系字段与拼接规则，
+# 所以 schema / knowledge / 生成入口都自成一套，不走 /anima/* 的 workflow 统一分发。
+_MOSS_SCHEMA_FILE = "tool_schema_moss.json"
+_MOSS_KNOWLEDGE = {
+    "moss_expert": "moss_expert.md",
+    "moss_examples": "moss_examples.md",
+}
+
 
 def _schema_response(workflow: str) -> web.Response:
     schema_path = _SCHEMA_DIR / WORKFLOWS[workflow]["schema"]
@@ -347,6 +356,72 @@ def _setup_routes():
         return web.json_response(result)
 
     # -------------------------
+    # MOSS-Image 独立接口：/moss/*（Layout JSON 提示词，与 /anima/* 的 workflow 统一分发无关）
+    # -------------------------
+    @routes.get("/moss/info")
+    async def moss_info(request):
+        return web.json_response({
+            "workflow": "moss",
+            "description": "MOSS-Image 图像生成（Layout JSON 提示词 + 中英文字面文字渲染，原生分格控制）",
+            "model": {
+                "checkpoint": "moss_image_sft_turbo_int8_convrot_aio.safetensors",
+                "path": "models/checkpoints/",
+            },
+            "prompt_format": "layout_json",
+            "sampling": {
+                "steps": 8,
+                "cfg": 1.0,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1.0,
+                "shift": 5,
+            },
+            "reference": {
+                "fields": ["reference_image", "reference_images"],
+                "mode": "text_encoder_vision",
+                "note": "参考图送 TE 视觉分支（TextEncodeMingImageEdit + Picture N 占位符），每张缩到约 384²，不带 VAE latent，最多 4 张",
+            },
+            "endpoints": {
+                "generate": "POST /moss/generate",
+                "schema": "GET /moss/schema",
+                "knowledge": "GET /moss/knowledge",
+            },
+        })
+
+    @routes.get("/moss/schema")
+    async def moss_schema(request):
+        schema_path = _SCHEMA_DIR / _MOSS_SCHEMA_FILE
+        if not schema_path.exists():
+            return web.json_response({"error": f"schema not found: {_MOSS_SCHEMA_FILE}"}, status=404)
+        return web.json_response(json.loads(schema_path.read_text(encoding="utf-8")))
+
+    @routes.get("/moss/knowledge")
+    async def moss_knowledge(request):
+        return web.json_response({
+            key: _read_text(_KNOWLEDGE_DIR / filename)
+            for key, filename in _MOSS_KNOWLEDGE.items()
+        })
+
+    @routes.post("/moss/generate")
+    async def moss_generate(request):
+        try:
+            body = await request.json()
+        except Exception as e:
+            return web.json_response({"error": f"JSON parse error: {e}"}, status=400)
+
+        # 与 /anima/generate 一样兼容 {"payload": {...}} 包装
+        payload = body["payload"] if isinstance(body.get("payload"), dict) else body
+        try:
+            result = await asyncio.to_thread(executor.generate_moss, payload)
+        except ValueError as e:
+            # Layout 草稿不合法（label/bbox/画布越界）属于调用方问题
+            return web.json_response({"error": str(e)}, status=400)
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
+        return web.json_response(result)
+
+    # -------------------------
     # 兼容性接口：等价于 workflow 参数的固定写法，保持不变
     # -------------------------
     @routes.post("/anima/generate_turbo_v1")
@@ -410,7 +485,7 @@ def _setup_routes():
     # -------------------------
     register_tagger_routes(routes)
 
-    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + "), /anima/tagger/models, /anima/reverse_tag (图像反推)")
+    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + "), /anima/tagger/models, /anima/reverse_tag (图像反推), /moss/info, /moss/schema, /moss/knowledge, /moss/generate (MOSS-Image 独立接口)")
 
 
 # ComfyUI 加载 custom_nodes 时会 import 这个模块

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MOSS-Image 独立接口 `/moss/*`（2026-10-22）**: 接入 `moss_image_sft_turbo_int8_convrot_aio.safetensors`（单文件 AIO：DiT INT8 ConvRot + Qwen3.5-9B TE + FLUX.2 VAE）。与 Anima 系**不共用** `/anima/*` 的 workflow 注册表：MOSS 的提示词是 Layout JSON（`summary` + `items` + 像素框位），不是 tag 字段。新增 `GET /moss/info`、`GET /moss/schema`、`GET /moss/knowledge`、`POST /moss/generate`（FastAPI 独立服务同名路由，MCP 工具 `generate_moss_image`）；`schemas/tool_schema_moss.json` + `knowledge/moss_expert.md` / `moss_examples.md`（由官方 prompt skill 与 USERGUIDE 整理）；`executor/workflow_template_moss.json`；执行器新增 `compile_moss_layout()`（把顶左像素 `xyxy` 草稿编译成 `abs_centralized` / `yxyx`，算法与官方 `compile_prompt.py` 逐位一致）、`_inject_moss()`、`generate_moss()`，历史记录独立存 `outputs/history_moss.jsonl`。官方推荐采样：8 步 / CFG 1 / `euler` + `simple` / 无负面。
+- **MOSS 参考图（TE 视觉分支，2026-10-22）**: `reference_image` / `reference_images`（最多 4 张）。参考图走文本编码器视觉分支 `TextEncodeMingImageEdit`，提示词自动补 Qwen 模板占位符 `Picture N: <|vision_start|><|image_pad|><|vision_end|>`，每张缩到约 384²（`ImageScaleToTotalPixels`，0.147456 MP，保留比例），不带 VAE latent、负向保持纯文本。本机绝对路径按内容哈希复制进 ComfyUI input 目录。实现方案对照 `Langzaigg/minimax-h3-onepage-studio` 的多图接入提交，先用原始工作流验证（角色 + 道具双图四格漫画）再落到插件。
+
 - **fuse v1.2 衍生模型发布（2026-10-12）**: `fuse` 预设换用融合 UNET `anima29b-sm29t-fuse1.2.safetensors`（fuse v1.1 融合 NextGen 2.9bV1 LoRA@0.3，`examples/merge_fuse_nextgen_1_2.py` 本地生成）。横评 `examples/nextgen_lora_strength_test.py`：0.2/0.3/0.6 三强度 × 8 场景（4 SFW + 4 NSFW）同 seed 对照，结论——NSFW 解剖部位清晰度/准确度随强度提升、无打码/审查倾向，SFW 构图与人物遵循全部无带偏；0.3 为甜区（0.6 偶发非指令小道具、阴影偏移略增）。采样参数不变（10 步、cfg 固定 1.0、Euler a + normal、无负面），烟测见 `outputs/2026-10/Fuse12Smoke_*`。
 
 - **测试场景库变更（2026-10-12）**: 移除 s6_holo_onsen（赫萝温泉）；新增 s13_wolf_archer（@makihitsuji 白毛狼娘传统木弓箭右搭拇指射法瞄准镜头，fuse 两轮探针调稳，examples/fuse_bow_prompt_probe_test.py）与 s14_yukikaze_defeated（@makihitsuji 大破雪风战败牢房奴役，用户提供提示词）。
