@@ -2,7 +2,7 @@
   "1": {
     "class_type": "CheckpointLoaderSimple",
     "inputs": {
-      "ckpt_name": "moss_image_sft_turbo_int8_convrot_aio.safetensors"
+      "ckpt_name": "moss_image_anime_turbo.safetensors"
     }
   },
   "11": {

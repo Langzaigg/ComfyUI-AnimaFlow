@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MOSS 新版权重及采样组合全场景复测（2026-10-24）**: 模型文件更新后卸载旧权重缓存，复跑新版 Euler 4/6 步并新增 `res_multistep + simple` 4 步，57/57 成功；与旧版 38 张同 seed 结果横评。新版画面细节、服装和复杂动作明显增强，Euler 4/6 步差距缩小；res_multistep 4 步与 Euler 4 步质量/耗时同档、部分细节略清楚。新版 Euler 4/6 与 res_multistep 4 步中位耗时 27.5/34.3/28.2s，项目默认改为 **res_multistep + simple + 4 步**。结果：`examples/results/moss_steps_20261024_171822/`、`examples/results/moss_res_multistep_s4_20261024_174055/`。
+
+- **MOSS 4/6 步全场景对比与默认步数调整（2026-10-24）**: `examples/moss_steps_test.py` 复用完整 19 场景库，同 seed、提示词和分辨率各跑一轮，38/38 成功。人工目检 6 步在部分服装、道具和局部细节上略稳，整体无跨档提升；4/6 步中位耗时 29.3/38.4s，项目默认由官方 8 步调整为实测折中值 6 步，4 步保留作快速草图档。结果与并排图：`examples/results/moss_steps_20261024_160352/`。
+
+- **XPU 设备守护（2026-10-22）**: 新增 `device_guard.py`。Arc 上跑 MOSS 这类「单文件 checkpoint = 9.7GB TE + 5.4GB DiT」的模型时，16GB 显存装不下全部权重，改提示词就要把 TE 与 DiT 换进换出；换页时显存吃紧会让 Level Zero 复位上下文并报 `UR_RESULT_ERROR_DEVICE_LOST`，之后进程内所有 xpu 调用都会失败。守护做两件事：后台每 20s `torch.xpu.synchronize()` 探活（连续 2 次失败才判定，避免驱动抖动误杀），判定后按 `ANIMATOOL_DEVICE_RESTART_MODE=exit|off` 结束自身进程（交给外部守护拉起，插件不自己 spawn），带 300s 冷却与 30 分钟最多 3 次的熔断。新增 `GET /device/health`、`POST /device/restart`（FastAPI 同路由）。MOSS 执行失败时也会解析 ComfyUI history 的 error，命中 DEVICE_LOST 就主动上报守护并把错误原样返回给调用方。
+
+- **MOSS 提示词改为混合写法 + 复用 Anima 字段（2026-10-22）**: 去掉 `prompt_style` 三选一，统一为混合写法：结构化 tag 字段（`quality_meta_year_safe` / `count` / `character` / `series` / `appearance` / `artist` / `style` / `tags` / `environment`）按序拼成 tag 块，换行后接 `nltags` 自然语言句子；`quality_meta_year_safe` 一个字段承载 Quality → Score → Meta → Year → Safe，顺序在 knowledge 里注明。Layout 模式下 tag 块并入 `summary.caption`。`knowledge/moss_expert.md` 按 Anima 风格重写（拼接顺序 + 字段表 + 写法要点），`moss_examples.md` 换成 单幅 / 四格 Layout / 参考图 三例。旧字段 `prompt` 保留为 `nltags` 别名。
+
+- **主采样权重换成 moss_image_anime_turbo（2026-10-22）**: `MOSS_CKPT_NAME` 由 `moss_image_sft_turbo_int8_convrot_aio.safetensors` 改为 `moss_image_anime_turbo.safetensors`。新文件是把社区合并的 DiT（`moss_miaoka_turbo1_nsfw0.7_int8_merged`，miaoka turbo1 + NSFW LoRA 0.7 融合，**fused-qkv** 布局）按张量级并进原 AIO：保留原生 Qwen3.5-9B TE（1409 张量）与 FLUX.2 VAE（251 张量），DiT 用新的 757 张量替换。融合布局由 ComfyUI 按 `layers.0.proj.qkv.weight` 自动识别，无需拆分权重。采样参数不变（8 步 / CFG 1 / euler + simple）。
+
+- **图像反推改纯 CPU（2026-10-22）**: `tagger/service.py` 的 `_resolve_device()` 固定返回 `cpu`，去掉 XPU/CUDA 探测与 `ANIMA_TAGGER_DEVICE` 覆盖。反推是偶发调用，不值得占显存；Arc 上 MOSS 这类大模型会把 16GB 显存吃到见底，反推再抢显存容易把驱动推到 `DEVICE_LOST`。
+
 - **MOSS-Image 独立接口 `/moss/*`（2026-10-22）**: 接入 `moss_image_sft_turbo_int8_convrot_aio.safetensors`（单文件 AIO：DiT INT8 ConvRot + Qwen3.5-9B TE + FLUX.2 VAE）。与 Anima 系**不共用** `/anima/*` 的 workflow 注册表：MOSS 的提示词是 Layout JSON（`summary` + `items` + 像素框位），不是 tag 字段。新增 `GET /moss/info`、`GET /moss/schema`、`GET /moss/knowledge`、`POST /moss/generate`（FastAPI 独立服务同名路由，MCP 工具 `generate_moss_image`）；`schemas/tool_schema_moss.json` + `knowledge/moss_expert.md` / `moss_examples.md`（由官方 prompt skill 与 USERGUIDE 整理）；`executor/workflow_template_moss.json`；执行器新增 `compile_moss_layout()`（把顶左像素 `xyxy` 草稿编译成 `abs_centralized` / `yxyx`，算法与官方 `compile_prompt.py` 逐位一致）、`_inject_moss()`、`generate_moss()`，历史记录独立存 `outputs/history_moss.jsonl`。官方推荐采样：8 步 / CFG 1 / `euler` + `simple` / 无负面。
 - **MOSS 参考图（TE 视觉分支，2026-10-22）**: `reference_image` / `reference_images`（最多 4 张）。参考图走文本编码器视觉分支 `TextEncodeMingImageEdit`，提示词自动补 Qwen 模板占位符 `Picture N: <|vision_start|><|image_pad|><|vision_end|>`，每张缩到约 384²（`ImageScaleToTotalPixels`，0.147456 MP，保留比例），不带 VAE latent、负向保持纯文本。本机绝对路径按内容哈希复制进 ComfyUI input 目录。实现方案对照 `Langzaigg/minimax-h3-onepage-studio` 的多图接入提交，先用原始工作流验证（角色 + 道具双图四格漫画）再落到插件。
 

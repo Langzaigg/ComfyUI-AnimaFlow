@@ -4,13 +4,12 @@
 用 `python -m tagger.download` 下载。
 
 推理设备：默认自动检测（Intel XPU / CUDA 可用则用 GPU，否则 CPU），
-可用环境变量 ANIMA_TAGGER_DEVICE=cpu/xpu/cuda 强制指定。
+推理固定使用 CPU，不占用显存（避免与 MOSS 等大模型抢显存导致驱动复位）。
 """
 from __future__ import annotations
 
 import base64
 import io
-import os
 import re
 import threading
 from pathlib import Path
@@ -69,18 +68,11 @@ def list_models() -> Dict[str, Any]:
 
 
 def _resolve_device() -> str:
-    """timm 模型推理设备：环境变量优先，缺省自动检测 XPU，回落 CPU。"""
-    dev = os.environ.get("ANIMA_TAGGER_DEVICE", "").strip()
-    if dev:
-        return dev
-    try:
-        import torch
-        if getattr(torch, "xpu", None) is not None and torch.xpu.is_available():
-            return "xpu"
-        if torch.cuda.is_available():
-            return "cuda"
-    except Exception:
-        pass
+    """timm 模型推理固定走 CPU。
+
+    反推是偶发调用、单张几百毫秒级，没必要占用显存；Arc 上 MOSS 这类大模型会把
+    16GB 显存吃到见底，反推再抢显存容易把驱动推到 DEVICE_LOST，所以这里不碰 GPU。
+    """
     return "cpu"
 
 

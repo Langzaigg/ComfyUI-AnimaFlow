@@ -12,7 +12,7 @@
 - **多工作流统一 API**：base / turbo 系 / 2.9B / Aura 等多模型，通过 `workflow` 参数切换
 - **工作流发现 API**：`GET /anima/workflows` 返回全部工作流的 schema、知识与弃用状态，下游服务启动时动态拉取即可，工作流增删改无需额外适配
 - **人设库 API**：`/anima/characters` 维护角色人设（外观标签、造型、画师、自然语言描述），支持文本按名称/别名匹配与批量导入，供 Web 画图前端、聊天机器人等下游共用；数据存本地 JSON 文件，含私人设定不进仓库
-- **图像反推 API**：`/anima/reverse_tag` 把参考图反推为 Danbooru 标签 + 映射好的 Anima 生成字段（分级/人数/角色/作品/标签），本地推理不占 ComfyUI 后端，XPU/CUDA 自动加速
+- **图像反推 API**：`/anima/reverse_tag` 把参考图反推为 Danbooru 标签 + 映射好的 Anima 生成字段（分级/人数/角色/作品/标签），本地推理固定 CPU、不占显存（不与生成模型抢显存）
 - **三种接入方式**：MCP Server（图片原生显示在聊天窗口）、ComfyUI 内置 HTTP API、独立 FastAPI / CLI
 - **结构化提示词**：按各模型规范自动拼接（tag 系 / 自然语言系各自匹配）
 - **14 种长宽比预设**（21:9 ~ 9:21）、`repeat` / `batch_size` 批量生成、历史记录与 reroll
@@ -39,7 +39,7 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo 的 Turbo LoRA v1.1（强度 0.8，免补丁重映射版，非官方衍生） |
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
-| `moss_image_sft_turbo_int8_convrot_aio.safetensors` | `models/checkpoints/` | MOSS-Image Turbo AIO（独立接口 `/moss/*`，单文件含 DiT + TE + VAE） |
+| `moss_image_anime_turbo.safetensors` | `models/checkpoints/` | MOSS-Image Turbo 衍生 AIO（独立接口 `/moss/*`）：miaoka turbo1 + NSFW LoRA 0.7 融合的 INT8 fused-qkv 主采样权重 + 原生 Qwen3.5-9B TE + FLUX.2 VAE |
 
 模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）与 fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)；fuse v1.1 / Turbo LoRA v1.1 存档于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（已废弃）。各工作流对应的具体模型文件见其 schema / knowledge 文档。
 
@@ -117,15 +117,46 @@ curl -X POST "http://127.0.0.1:8188/moss/generate" \
   }'
 ```
 
+- **提示词固定混合写法**：结构化 tag 字段（字段名与 Anima 完全一致：`quality_meta_year_safe` / `count` /
+  `character` / `series` / `appearance` / `artist` / `style` / `tags` / `environment`）+ `nltags` 自然语言句子。
+  服务端按上述顺序拼 tag 块、换行接 `nltags`；`quality_meta_year_safe` 一个字段承载
+  **Quality → Score → Meta → Year → Safe** 四段，顺序见 knowledge。
 - 框位用**画布左上角原点的像素** `[x1, y1, x2, y2]`，服务端换算成模型要求的 `abs_centralized` / `yxyx`。
 - 要渲染的字必须放在 `elements[].text`（`label: "text"`）；宽高是 16 的倍数，约 1MP 最稳。
-- 官方推荐 8 步 / CFG 1 / `euler` + `simple`，无负面；不写 `elements` 时退化为纯文本提示词。
+- 项目默认 4 步 / CFG 1 / `res_multistep` + `simple`（新版模型 19 场景实测的质量/速度折中），无负面；备选 `euler` + `simple`，官方推荐 8 步。不写 `elements` 时退化为纯文本提示词。
 - **参考图**：`reference_image`（单张）/ `reference_images`（最多 4 张）。
   MOSS 的 Qwen3.5 文本编码器是多模态的，参考图走 TE 的视觉分支（`TextEncodeMingImageEdit`），
   提示词里自动补 `Picture N: <|vision_start|><|image_pad|><|vision_end|>` 占位符，每张缩到约 384²；
   不带 VAE latent，属于「带参考的生图」而非身份锁定，主体外观仍要写进 `prompt` 与 `caption`。
 - 也接受官方 prompt skill 的草稿格式（`summary` + `items`），字段名会自动归一。
 - 独立 FastAPI（方式 3）与 MCP（`generate_moss_image` 工具）提供同样的能力。
+
+### XPU 设备守护（DEVICE_LOST 自动重启）
+
+Arc 上跑 MOSS 这种「单文件 checkpoint = 9.7 GB 文本编码器 + 5.4 GB DiT」的模型时，16 GB 显存装不下全部权重，
+每改一次提示词都要把 TE 与 DiT 换进换出。换页瞬间若显存吃紧，Level Zero 会复位上下文并报
+`UR_RESULT_ERROR_DEVICE_LOST`——之后进程内所有 xpu 调用（连 `soft_empty_cache` 里的 `synchronize`）都失败，只能重启进程。
+
+插件内置 `device_guard.py`：后台每 20s `torch.xpu.synchronize()` 探活，**连续两次失败**才判定丢失（避免驱动抖动误杀），
+判定后**结束自身进程**，由外部守护拉起（不在插件里自己 spawn，避免和外部守护重复启动），并带冷却与次数熔断防止崩溃循环。
+
+| 环境变量 | 默认 | 说明 |
+|---|---|---|
+| `ANIMATOOL_DEVICE_GUARD` | `1` | 关闭守护填 `0` |
+| `ANIMATOOL_DEVICE_GUARD_INTERVAL` | `20` | 探活间隔（秒） |
+| `ANIMATOOL_DEVICE_GUARD_GRACE` | `60` | 启动后多久开始探活 |
+| `ANIMATOOL_DEVICE_RESTART_MODE` | `exit` | `exit` 判定丢失后结束进程、由外部守护拉起（systemd / docker restart / 机器人 watchdog）/ `off` 只记录不退出 |
+| `ANIMATOOL_DEVICE_RESTART_COOLDOWN` | `300` | 两次重启的最小间隔 |
+| `ANIMATOOL_DEVICE_RESTART_LIMIT` | `3` | 30 分钟内最多重启次数，超过只标记不重启 |
+
+```bash
+curl http://127.0.0.1:8188/device/health
+# {"enabled":true,"state":"ok","mode":"exit","exits_in_window":0,...}
+curl -X POST http://127.0.0.1:8188/device/restart -H "Content-Type: application/json" -d '{"reason":"手动"}'
+```
+
+降风险建议：保持 `--reserve-vram 1`；同会话连续换提示词会反复重载 TE（实测第二次多花 ~35s），
+批量出图尽量固定提示词；画幅别超 1.5MP；跑 MOSS 时关掉其它吃显存的进程（桌面合成、浏览器硬件加速、另一个 ComfyUI 实例）。
 
 #### 人设库（`/anima/characters`）
 
@@ -163,7 +194,7 @@ python -m servers.cli --help
 
 ### 图像反推（`/anima/reverse_tag`）
 
-把参考图反推为 Danbooru 标签，并直接映射成 Anima 生成字段（`quality_meta_year_safe` / `count` / `character` / `series` / `tags`），可作为生成参数的底稿。推理在插件进程内本地执行（torch + timm），**不经过 ComfyUI 后端队列**；检测到 Intel XPU / CUDA 时自动用 GPU 加速（XPU 预热后约 0.2s/张），否则 CPU 约 3.5s/张。
+把参考图反推为 Danbooru 标签，并直接映射成 Anima 生成字段（`quality_meta_year_safe` / `count` / `character` / `series` / `tags`），可作为生成参数的底稿。推理在插件进程内本地执行（torch + timm），**不经过 ComfyUI 后端队列**；推理固定使用 CPU（约 3.5s/张），不占用显存——Arc 上 MOSS 这类大模型会把 16GB 显存吃到见底，反推再抢显存容易把驱动推到 DEVICE_LOST。
 
 **部署**（首次使用需下载模型，约 1.3GB）：
 
@@ -275,7 +306,6 @@ fuse 示例（v1.1 时期出图；v1.2 沿用同采样参数，仅融合 NextGen
 | `ANIMATOOL_CHARACTERS_FILE` | `<插件目录>/data/characters.json` | 人设库数据文件（含私人设定，已 gitignore） |
 | `ANIMATOOL_TIMEOUT` | `600` | 生成超时（秒） |
 | `ANIMATOOL_TARGET_MP` | `1.0` | 目标像素数（MP） |
-| `ANIMA_TAGGER_DEVICE` | 自动（XPU > CUDA > CPU） | 图像反推推理设备，可填 `cpu` / `xpu` / `cuda` 强制指定 |
 
 完整配置与远程部署说明见 wiki。
 

@@ -19,6 +19,11 @@ from urllib.parse import urlencode, urljoin
 from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, MOSS_CKPT_NAME, MOSS_SAMPLER, MOSS_STEPS, MOSS_CFG
 from .history import HistoryManager
 
+try:  # ComfyUI 内以插件包导入
+    from ..device_guard import get_guard, is_device_lost
+except ImportError:  # 独立进程（FastAPI / MCP）以顶层包导入
+    from device_guard import get_guard, is_device_lost
+
 logger = logging.getLogger("anima_tool")
 
 
@@ -267,7 +272,7 @@ _V2_MODEL_PRESETS = {
 
 
 # MOSS-Image 预设：单文件 checkpoint（DiT + TE + VAE），无 LoRA 槽位，也不进 _V2_MODEL_PRESETS。
-# 官方推荐 8 步 / CFG 1 / euler + simple / 无负面；cfg 上限 1.6 只给显式写 neg 的实验场景。
+# 项目默认 4 步 / CFG 1 / res_multistep + simple（官方推荐 8 步 euler + simple） / 无负面；cfg 上限 1.6 只给显式写 neg 的实验场景。
 _MOSS_PRESET = {
     "ckpt": MOSS_CKPT_NAME, "steps": MOSS_STEPS, "cfg": MOSS_CFG,
     "steps_range": (4, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
@@ -276,6 +281,38 @@ _MOSS_PRESET = {
 
 # MOSS Layout 的合法标签，与官方 compile_prompt.py 一致
 _MOSS_LABELS = ("object", "character", "text")
+
+# 提示词固定用混合写法：tag 块（顺序同 Anima）在前，自然语言在后。
+# tag 块字段名复用 Anima 的 schema；Quality → Score → Meta → Year → Safe 都塞在
+# quality_meta_year_safe 一个字段里，Knowledge 里写明这个顺序。
+_MOSS_TAG_ORDER = (
+    "quality_meta_year_safe", "count", "character", "series",
+    "appearance", "artist", "style", "tags", "environment",
+)
+
+
+def _moss_tag_value(payload: Dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if isinstance(value, (list, tuple)):
+        value = ", ".join(str(v).strip() for v in value if str(v).strip())
+    return str(value or "").strip().strip(",")
+
+
+def build_moss_positive_text(payload: Dict[str, Any]) -> str:
+    """
+    混合拼提示词：tag 块 + 换行 + 自然语言。
+
+    tag 顺序（与 Anima 一致）：quality_meta_year_safe → count → character → series →
+    appearance → artist → style → tags → environment；自然语言取 nltags（兼容旧字段 prompt）。
+    两者都为空时返回空串，由调用方报错。
+    """
+    tags_block = ", ".join(
+        value for value in (_moss_tag_value(payload, key) for key in _MOSS_TAG_ORDER) if value
+    )
+    prose = str(payload.get("nltags") or payload.get("prompt") or "").strip()
+    if tags_block and prose:
+        return tags_block + "\n" + prose
+    return tags_block or prose
 
 
 def _moss_centered_box(box: Any, width: int, height: int, location: str) -> List[int]:
@@ -339,9 +376,9 @@ def compile_moss_layout(prompt_json: Dict[str, Any], width: int, height: int) ->
 
     没有 elements 时退化为纯文本 caption 提示词（模型同样接受自然语言）。
     """
-    caption = str(prompt_json.get("prompt") or "").strip()
+    caption = build_moss_positive_text(prompt_json)
     if not caption:
-        raise ValueError("prompt 不能为空（作为 summary.caption）")
+        raise ValueError("Layout 模式缺少画面描述：nltags（或 tag 字段）不能为空")
 
     elements = prompt_json.get("elements") or []
     if not isinstance(elements, list):
@@ -918,10 +955,15 @@ class AnimaExecutor:
             width, height = 1024, 1024
         width, height = int(width), int(height)
 
-        # Layout 的框位是像素坐标，必须等宽高确定后再编译
+        # 提示词：混合写法（tag 块 + 自然语言），有 elements 时把拼好的文字作为 Layout 的 summary.caption
         positive = str(prompt_json.get("positive") or "").strip()
         if not positive:
-            positive = compile_moss_layout(prompt_json, width, height)
+            if prompt_json.get("elements"):
+                positive = compile_moss_layout(prompt_json, width, height)
+            else:
+                positive = build_moss_positive_text(prompt_json)
+        if not positive:
+            raise ValueError("提示词为空：nltags 与 tags 等字段至少给一个")
         negative = str(prompt_json.get("neg") or prompt_json.get("negative") or "").strip()
 
         # 参考图：送到文本编码器的视觉分支（MOSS 的 Qwen3.5 TE 是多模态的），
@@ -964,7 +1006,7 @@ class AnimaExecutor:
             seed = int.from_bytes(uuid.uuid4().bytes[:4], "big", signed=False)
         wf["19"]["inputs"]["seed"] = int(seed)
 
-        # 采样参数：官方推荐 8 步 / CFG 1 / euler + simple
+        # 采样参数：项目默认 4 步 / CFG 1 / res_multistep + simple（官方推荐 8 步 euler + simple）
         steps = int(prompt_json.get("steps") or preset["steps"])
         lo, hi = preset["steps_range"]
         wf["19"]["inputs"]["steps"] = max(lo, min(hi, steps))
@@ -1725,6 +1767,21 @@ class AnimaExecutor:
 
         return result
 
+    def _raise_on_moss_failure(self, history_item: Dict[str, Any], prompt_id: str) -> None:
+        """ComfyUI 执行失败时抛错；遇到设备上下文丢失则上报设备守护触发重启。"""
+        status = history_item.get("status") or {}
+        if status.get("status_str") != "error":
+            return
+        detail = json.dumps(status.get("messages") or [], ensure_ascii=False)
+        if is_device_lost(detail):
+            get_guard().notify_device_lost(detail)
+            raise RuntimeError(
+                "MOSS 执行失败：XPU 设备上下文丢失（UR_RESULT_ERROR_DEVICE_LOST，"
+                f"prompt_id={prompt_id}）。16GB 卡上 TE(9.7GB)/DiT(5.4GB) 反复换页时容易触发，"
+                "已通知设备守护按 ANIMATOOL_DEVICE_RESTART_MODE 重启。"
+            )
+        raise RuntimeError(f"MOSS 执行失败（prompt_id={prompt_id}）：{detail[:500]}")
+
     def generate_moss(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
         """
         MOSS-Image 生成入口（独立接口 /moss/generate，Layout JSON 提示词而非 tag 串）。
@@ -1743,6 +1800,7 @@ class AnimaExecutor:
         self._maybe_clean_comfyui_output()
         prompt_id = self.queue_prompt(prompt)
         history_item = self.wait_history(prompt_id)
+        self._raise_on_moss_failure(history_item, prompt_id)
         images = self._extract_images(prompt_id, history_item)
         images = self._download_images(images)
 

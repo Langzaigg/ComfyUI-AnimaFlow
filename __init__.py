@@ -35,6 +35,7 @@ from pathlib import Path
 from aiohttp import web
 
 from .executor import AnimaExecutor, AnimaToolConfig
+from .device_guard import get_guard
 from .characters import CharacterStore
 from .characters.routes import register_character_routes
 from .tagger.routes import register_tagger_routes
@@ -364,7 +365,7 @@ def _setup_routes():
             "workflow": "moss",
             "description": "MOSS-Image 图像生成（Layout JSON 提示词 + 中英文字面文字渲染，原生分格控制）",
             "model": {
-                "checkpoint": "moss_image_sft_turbo_int8_convrot_aio.safetensors",
+                "checkpoint": "moss_image_anime_turbo.safetensors",
                 "path": "models/checkpoints/",
             },
             "prompt_format": "layout_json",
@@ -485,7 +486,29 @@ def _setup_routes():
     # -------------------------
     register_tagger_routes(routes)
 
-    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + "), /anima/tagger/models, /anima/reverse_tag (图像反推), /moss/info, /moss/schema, /moss/knowledge, /moss/generate (MOSS-Image 独立接口)")
+    # -------------------------
+    # XPU 设备守护：/device/health、/device/restart
+    # Level Zero 上下文丢失（DEVICE_LOST）时自动重启进程，见 device_guard.py
+    # -------------------------
+    guard = get_guard()
+
+    @routes.get("/device/health")
+    async def device_health(request):
+        return web.json_response(guard.health())
+
+    @routes.post("/device/restart")
+    async def device_restart(request):
+        reason = "manual restart via /device/restart"
+        try:
+            body = await request.json()
+            if isinstance(body, dict) and body.get("reason"):
+                reason = str(body["reason"])[:200]
+        except Exception:
+            pass
+        guard.force_restart(reason)
+        return web.json_response({"scheduled": True, "mode": guard.mode, "reason": reason}, status=202)
+
+    print("[ComfyUI-AnimaTool] Routes registered: /anima/health, /anima/workflows, /anima/schema, /anima/knowledge, /anima/generate (主 API，支持 workflow 参数，缺省 base), /anima/generate_turbo_v1, /anima/generate_aesthetic_v1, /anima/schema_turbo_v1, /anima/schema_aesthetic_v1, /anima/knowledge_new_models (兼容接口), /anima/characters* (人设库，数据 " + str(character_store.path) + "), /anima/tagger/models, /anima/reverse_tag (图像反推), /moss/info, /moss/schema, /moss/knowledge, /moss/generate (MOSS-Image 独立接口), /device/health, /device/restart (XPU 设备守护)")
 
 
 # ComfyUI 加载 custom_nodes 时会 import 这个模块

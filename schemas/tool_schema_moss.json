@@ -1,44 +1,75 @@
 {
   "name": "generate_moss_image",
-  "description": "MOSS-Image 图像生成接口（5B DiT，原生 Layout 控制 + 中英文字面文字渲染）。用 prompt 描述整体画面，用 elements 给出每个角色/物件/文字的框位；服务端把草稿框位编译成模型要求的 Layout JSON。适合漫画分格、海报、贴纸便签、UI 稿等需要精确摆放文字与物件的画面。不要写质量/分数标签。",
+  "description": "MOSS-Image 图像生成接口（5B DiT，原生 Layout 框位控制 + 中英文字面文字渲染）。提示词固定用混合写法：结构化 tag 字段（字段名与 Anima 一致）+ nltags 自然语言句子。需要精确摆放角色/物件/文字时给 elements 走 Layout 模式；有参考图时走文本编码器视觉分支。字段与拼接顺序见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {
-      "prompt": {
+      "quality_meta_year_safe": {
         "type": "string",
-        "description": "整体画面描述（进 Layout 的 summary.caption）：主体、动作、场景、媒介与风格、光线、配色、氛围，以及分格方式（如 2x2 四格漫画、画布含粗黑格线）。只描述可见内容，不要写坐标换算、JSON 字段等工具说明。"
+        "description": "元标签：按 Quality → Score → Meta → Year → 安全等级 的顺序写在一个字段里，如 'masterpiece, best quality, score_8, highres, year 2026, safe'。质量词点到为止，别堆一长串；安全等级必须明确（safe/sensitive/nsfw/explicit）。MOSS 没有明确的 score 训练体系，score_N 可留空。",
+        "default": "masterpiece, best quality, year 2026, safe"
+      },
+      "count": {
+        "type": "string",
+        "description": "人数标签，如 '1girl' / '2girls' / '1boy' / 'no humans'。",
+        "default": "1girl"
+      },
+      "character": {
+        "type": "string",
+        "description": "角色名，多个用逗号分隔，如 'hatsune miku'。避免下划线。",
+        "default": ""
+      },
+      "series": {
+        "type": "string",
+        "description": "作品/系列标签，跟随角色名给出，如 'vocaloid'。避免下划线。",
+        "default": ""
+      },
+      "appearance": {
+        "type": "string",
+        "description": "角色外观标签（逗号分隔的标准 Danbooru 标签）：发色发型、瞳色、服装、饰品。仅单角色使用；多角色留空，外貌写进 nltags 逐角色描述。",
+        "default": ""
+      },
+      "artist": {
+        "type": "string",
+        "description": "画师标签，以 @ 开头，如 '@wlop'。写实向题材慎用。",
+        "default": ""
+      },
+      "style": {
+        "type": "string",
+        "description": "风格标签：画风/媒介/渲染倾向，如 'anime color'、'watercolor'、'flat illustration'、'monochrome'。",
+        "default": ""
+      },
+      "tags": {
+        "type": "string",
+        "description": "通用标签：动作、服装细节、构图、道具等，逗号分隔，如 'white dress, standing, holding cup, outdoors'。",
+        "default": ""
+      },
+      "environment": {
+        "type": "string",
+        "description": "环境标签：场景、天气、时间、背景元素，如 'sunflower field, sunlight, outdoors, depth of field'。",
+        "default": ""
+      },
+      "nltags": {
+        "type": "string",
+        "description": "自然语言描述（混合写法的后半段）：英文完整句子，写动作、镜头、光线、材质、氛围与剧情。它排在 tag 块之后、换行分隔，是氛围与叙事的主要载体。也接受旧字段名 prompt。",
+        "default": ""
       },
       "canvas": {
         "type": "string",
         "description": "版面形态：single 单幅、multi_panel 多格（漫画/连环画）、collage 拼贴。默认 single。",
-        "enum": [
-          "single",
-          "multi_panel",
-          "collage"
-        ],
+        "enum": ["single", "multi_panel", "collage"],
         "default": "single"
-      },
-      "meta": {
-        "type": "array",
-        "description": "媒介/体裁标签，如 ['four-panel comic', 'manga', 'black and white']。可选。",
-        "items": {
-          "type": "string"
-        }
       },
       "elements": {
         "type": "array",
-        "description": "Layout 元素数组。每个元素描述一个需要独立摆放的可见单元：角色、物件或要渲染的字。不写 elements 时退化为纯文本 caption 提示词。框位是画布左上角原点的像素 [x1, y1, x2, y2]，范围 0..width / 0..height，不要用归一化坐标。",
+        "description": "Layout 元素数组（可选）。给了就走 Layout 模式：nltags 成为整图描述，每个元素单独指定框位，适合漫画分格、海报、贴纸文案。框位是画布左上角原点的像素 [x1, y1, x2, y2]，范围 0..width / 0..height。",
         "items": {
           "type": "object",
           "properties": {
             "label": {
               "type": "string",
               "description": "元素类型：character 角色、object 物件/场景块、text 需要渲染的字。",
-              "enum": [
-                "object",
-                "character",
-                "text"
-              ]
+              "enum": ["object", "character", "text"]
             },
             "caption": {
               "type": "string",
@@ -51,32 +82,22 @@
             "bbox": {
               "type": "array",
               "description": "框位 [x1, y1, x2, y2]，画布左上角原点的像素坐标（整数）。框只是摆放约束，不会画出边框。",
-              "items": {
-                "type": "integer"
-              },
+              "items": { "type": "integer" },
               "minItems": 4,
               "maxItems": 4
             },
             "tags": {
               "type": "array",
               "description": "可选：该元素的额外标签。",
-              "items": {
-                "type": "string"
-              }
+              "items": { "type": "string" }
             },
             "palette": {
               "type": "array",
               "description": "可选：该元素的配色（颜色名或 hex）。",
-              "items": {
-                "type": "string"
-              }
+              "items": { "type": "string" }
             }
           },
-          "required": [
-            "label",
-            "caption",
-            "bbox"
-          ],
+          "required": ["label", "caption", "bbox"],
           "additionalProperties": false
         }
       },
@@ -87,8 +108,8 @@
       },
       "steps": {
         "type": "integer",
-        "description": "采样步数（4-12）。官方推荐 8 步。",
-        "default": 8,
+        "description": "采样步数（4-12）。项目默认 4 步并配 res_multistep + simple（新版模型 19 场景实测的质量/速度折中）；官方推荐 8 步 euler + simple。",
+        "default": 4,
         "minimum": 4,
         "maximum": 12
       },
@@ -101,24 +122,29 @@
       "aspect_ratio": {
         "type": "string",
         "description": "图片比例。默认 1:1；约 1MP 的像素量最稳。与 width/height 同时给出时以 width/height 为准。",
-        "enum": [
-          "16:9",
-          "3:2",
-          "1:1",
-          "2:3",
-          "9:16"
-        ],
+        "enum": ["16:9", "3:2", "1:1", "2:3", "9:16"],
         "default": "1:1"
       },
       "width": {
         "type": "integer",
-        "description": "宽度（像素），必须是 16 的倍数。给出时 layout 的框位也按这个画布计算。",
+        "description": "宽度（像素），必须是 16 的倍数。给出时 Layout 的框位也按这个画布计算。",
         "minimum": 256
       },
       "height": {
         "type": "integer",
         "description": "高度（像素），必须是 16 的倍数。",
         "minimum": 256
+      },
+      "reference_image": {
+        "type": "string",
+        "description": "可选：单张参考图。填 ComfyUI input 目录内的图片文件名；本机部署也可直接填绝对路径（服务端按内容哈希复制进 input 目录）。参考图走文本编码器的视觉分支（Picture 1），用来带人物/道具/画风，不是逐像素复刻。",
+        "default": ""
+      },
+      "reference_images": {
+        "type": "array",
+        "description": "可选：多张参考图（最多 4 张），按顺序成为提示词里的 Picture 1、Picture 2…，送入文本编码器视觉分支。适合「角色 + 道具」或「角色 + 另一个角色」同框：每张图绑定一个主体，各主体外观仍要在 nltags 与 caption 里写清楚。",
+        "items": { "type": "string" },
+        "maxItems": 4
       },
       "batch_size": {
         "type": "integer",
@@ -131,33 +157,18 @@
         "description": "随机种子。缺省则随机。",
         "minimum": 0
       },
-      "reference_image": {
-        "type": "string",
-        "description": "可选：单张参考图。填 ComfyUI input 目录内的图片文件名；本机部署也可直接填绝对路径（服务端按内容哈希复制进 input 目录）。参考图走文本编码器的视觉分支（Picture 1），用来带人物/道具/画风，不是逐像素复刻。",
-        "default": ""
-      },
-      "reference_images": {
-        "type": "array",
-        "description": "可选：多张参考图（最多 4 张），按顺序成为提示词里的 Picture 1、Picture 2…，送入文本编码器视觉分支。适合「角色 + 道具」或「角色 + 另一个角色」同框：每张图绑定一个主体，各主体外观仍要在 prompt 与 caption 里写清楚。",
-        "items": {
-          "type": "string"
-        },
-        "maxItems": 4
-      },
       "positive": {
         "type": "string",
-        "description": "可选：直接给出最终提示词（已编译的 Layout JSON 或 caption），覆盖 prompt/elements 的编译结果。通常不需要。",
+        "description": "可选：直接给出最终提示词（已按顺序排好的 tag 串 + 自然语言，或已编译的 Layout JSON），覆盖所有字段的拼接结果。通常不需要。",
         "default": ""
       },
       "filename_prefix": {
         "type": "string",
-        "description": "输出文件名前缀。缺省 AnimaTool_moss_。",
+        "description": "输出文件名前缀。缺省 MOSS_。",
         "default": ""
       }
     },
-    "required": [
-      "prompt"
-    ],
+    "required": ["nltags"],
     "additionalProperties": false
   }
 }

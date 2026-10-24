@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from executor import AnimaExecutor, AnimaToolConfig
+from device_guard import get_guard
 from executor.config import MOSS_CKPT_NAME, MOSS_CFG, MOSS_SAMPLER, MOSS_STEPS
 from tagger.service import TaggerError, decode_image, list_models as list_tagger_models, tag_image
 
@@ -307,6 +308,21 @@ def create_app() -> FastAPI:
     @app.get("/moss/knowledge")
     def moss_knowledge() -> Dict[str, Any]:
         return {key: _read_text(_KNOWLEDGE_DIR / filename) for key, filename in MOSS_KNOWLEDGE.items()}
+
+    # -------------------------
+    # XPU 设备守护：/device/health、/device/restart（DEVICE_LOST 时自动重启进程）
+    # -------------------------
+    guard = get_guard()
+
+    @app.get("/device/health")
+    def device_health() -> Dict[str, Any]:
+        return guard.health()
+
+    @app.post("/device/restart")
+    def device_restart(body: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        reason = str((body or {}).get("reason") or "manual restart via /device/restart")[:200]
+        guard.force_restart(reason)
+        return {"scheduled": True, "mode": guard.mode, "reason": reason}
 
     @app.post("/moss/generate")
     async def moss_generate(body: Dict[str, Any]) -> Dict[str, Any]:
