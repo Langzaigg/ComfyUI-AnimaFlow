@@ -938,19 +938,36 @@ class AnimaExecutor:
 
         wf["1"]["inputs"]["ckpt_name"] = str(prompt_json.get("ckpt_name") or preset["ckpt"])
 
-        # 分辨率：MOSS 要求宽高为 16 的倍数，官方建议约 1MP
+        # 改图（p图）输入：走 VAE latent，和 reference_images（TE 视觉分支）是两条独立路径。
+        # 先把图解析成 input 目录文件名（绝对路径会按内容哈希复制进去），尺寸也要读原图。
+        edit_name = str(prompt_json.get("edit_image") or "").strip()
+        edit_resolved = self._resolve_reference_image(edit_name) if edit_name else ""
+        edit_size: Optional[Tuple[int, int]] = None
+        if edit_resolved:
+            try:
+                from PIL import Image
+
+                with Image.open(self._comfyui_input_dir() / edit_resolved) as im:
+                    edit_size = im.size
+            except Exception as exc:
+                raise ValueError(f"edit_image 读取失败：{exc}") from None
+
+        # 分辨率：MOSS 要求宽高为 16 的倍数，官方建议约 1MP。
+        # 改图模式没显式给尺寸时按原图比例取整（保持构图，不强行改画幅）。
         width = prompt_json.get("width")
         height = prompt_json.get("height")
         aspect_ratio = (prompt_json.get("aspect_ratio") or "").strip()
-        if (width is None or height is None) and aspect_ratio:
+        if width is not None and height is not None:
+            width = align_dimension(int(width), 16)
+            height = align_dimension(int(height), 16)
+        elif aspect_ratio:
             width, height = estimate_size_from_ratio(
                 aspect_ratio=aspect_ratio,
                 target_megapixels=float(prompt_json.get("target_megapixels") or self.config.target_megapixels),
                 round_to=16,
             )
-        elif width is not None and height is not None:
-            width = align_dimension(int(width), 16)
-            height = align_dimension(int(height), 16)
+        elif edit_size:
+            width, height = align_dimension(edit_size[0], 16), align_dimension(edit_size[1], 16)
         if width is None or height is None:
             width, height = 1024, 1024
         width, height = int(width), int(height)
@@ -1000,6 +1017,21 @@ class AnimaExecutor:
         wf["28"]["inputs"]["width"] = width
         wf["28"]["inputs"]["height"] = height
         wf["28"]["inputs"]["batch_size"] = int(prompt_json.get("batch_size") or 1)
+
+        # 改图（p图）模式：原图 → VAE encode → 作为采样初始 latent，denoise < 1 保留原图结构。
+        # 与上面的 TE 参考图互不影响：同一请求可以既给改图底图、又给额外的参考图。
+        if edit_resolved:
+            edit_denoise = prompt_json.get("edit_denoise")
+            if edit_denoise is None:
+                edit_denoise = prompt_json.get("denoise")
+            wf["40"] = {"class_type": "LoadImage", "inputs": {"image": edit_resolved}}
+            wf["41"] = {"class_type": "ImageScale", "inputs": {
+                "image": ["40", 0], "upscale_method": "lanczos",
+                "width": width, "height": height, "crop": "disabled",
+            }}
+            wf["42"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["41", 0], "vae": ["1", 2]}}
+            wf["19"]["inputs"]["latent_image"] = ["42", 0]
+            wf["19"]["inputs"]["denoise"] = max(0.2, min(1.0, float(edit_denoise if edit_denoise is not None else 0.70)))
 
         seed = prompt_json.get("seed")
         if seed is None:
@@ -1841,9 +1873,11 @@ class AnimaExecutor:
             "width": int(prompt["28"]["inputs"]["width"]),
             "height": int(prompt["28"]["inputs"]["height"]),
             "reference_images": [
-                node["inputs"]["image"] for node in prompt.values()
-                if node.get("class_type") == "LoadImage"
+                node["inputs"]["image"] for nid, node in prompt.items()
+                if node.get("class_type") == "LoadImage" and nid != "40"
             ],
+            "edit_image": (prompt.get("40") or {}).get("inputs", {}).get("image"),
+            "denoise": float((prompt.get("19") or {}).get("inputs", {}).get("denoise") or 1.0),
             "images": images_data,
         }
 

@@ -291,6 +291,16 @@ def create_app() -> FastAPI:
                 "denoise": 1.0,
                 "shift": 5,
             },
+            "reference": {
+                "fields": ["reference_image", "reference_images"],
+                "mode": "text_encoder_vision",
+                "note": "参考图送 TE 视觉分支（TextEncodeMingImageEdit + Picture N 占位符），每张缩到约 384²，不带 VAE latent，最多 4 张",
+            },
+            "edit": {
+                "fields": ["edit_image", "edit_denoise"],
+                "mode": "vae_latent",
+                "note": "改图走 LoadImage → ImageScale → VAEEncode 作为初始 latent；未给宽高时按原图尺寸各向上取整到 16 的倍数，edit_denoise 默认 0.70（0.2-1.0）",
+            },
             "endpoints": {
                 "generate": "POST /moss/generate",
                 "schema": "GET /moss/schema",

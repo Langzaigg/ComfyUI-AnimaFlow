@@ -1,6 +1,6 @@
 {
   "name": "generate_moss_image",
-  "description": "MOSS-Image 图像生成接口（5B DiT，原生 Layout 框位控制 + 中英文字面文字渲染）。提示词固定用混合写法：结构化 tag 字段（字段名与 Anima 一致）+ nltags 自然语言句子。需要精确摆放角色/物件/文字时给 elements 走 Layout 模式；有参考图时走文本编码器视觉分支。字段与拼接顺序见对应 knowledge。",
+  "description": "MOSS-Image 图像生成接口（5B DiT，原生 Layout 框位控制 + 中英文字面文字渲染）。提示词固定用混合写法：结构化 tag 字段（字段名与 Anima 一致）+ nltags 自然语言句子。需要精确摆放角色/物件/文字时给 elements 走 Layout 模式；有参考图时走文本编码器视觉分支（语义参考）。要对已有图做微调/改图（p 图）时用 edit_image 走 VAE latent（保留原图构图与宽高比），两条路径可同时使用。字段与拼接顺序见对应 knowledge。",
   "parameters": {
     "type": "object",
     "properties": {
@@ -57,7 +57,11 @@
       "canvas": {
         "type": "string",
         "description": "版面形态：single 单幅、multi_panel 多格（漫画/连环画）、collage 拼贴。默认 single。",
-        "enum": ["single", "multi_panel", "collage"],
+        "enum": [
+          "single",
+          "multi_panel",
+          "collage"
+        ],
         "default": "single"
       },
       "elements": {
@@ -69,7 +73,11 @@
             "label": {
               "type": "string",
               "description": "元素类型：character 角色、object 物件/场景块、text 需要渲染的字。",
-              "enum": ["object", "character", "text"]
+              "enum": [
+                "object",
+                "character",
+                "text"
+              ]
             },
             "caption": {
               "type": "string",
@@ -82,22 +90,32 @@
             "bbox": {
               "type": "array",
               "description": "框位 [x1, y1, x2, y2]，画布左上角原点的像素坐标（整数）。框只是摆放约束，不会画出边框。",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "minItems": 4,
               "maxItems": 4
             },
             "tags": {
               "type": "array",
               "description": "可选：该元素的额外标签。",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "palette": {
               "type": "array",
               "description": "可选：该元素的配色（颜色名或 hex）。",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           },
-          "required": ["label", "caption", "bbox"],
+          "required": [
+            "label",
+            "caption",
+            "bbox"
+          ],
           "additionalProperties": false
         }
       },
@@ -122,7 +140,13 @@
       "aspect_ratio": {
         "type": "string",
         "description": "图片比例。默认 1:1；约 1MP 的像素量最稳。与 width/height 同时给出时以 width/height 为准。",
-        "enum": ["16:9", "3:2", "1:1", "2:3", "9:16"],
+        "enum": [
+          "16:9",
+          "3:2",
+          "1:1",
+          "2:3",
+          "9:16"
+        ],
         "default": "1:1"
       },
       "width": {
@@ -143,8 +167,22 @@
       "reference_images": {
         "type": "array",
         "description": "可选：多张参考图（最多 4 张），按顺序成为提示词里的 Picture 1、Picture 2…，送入文本编码器视觉分支。适合「角色 + 道具」或「角色 + 另一个角色」同框：每张图绑定一个主体，各主体外观仍要在 nltags 与 caption 里写清楚。",
-        "items": { "type": "string" },
+        "items": {
+          "type": "string"
+        },
         "maxItems": 4
+      },
+      "edit_image": {
+        "type": "string",
+        "description": "可选：改图（p 图）底图。填 ComfyUI input 目录内的图片文件名；本机部署也可直接填绝对路径。这张图走 VAE encode 作为采样初始 latent（denoise 由 edit_denoise 控制），保留原图构图与比例，与 reference_images 的 TE 语义参考是两条独立路径。与 reference_images 可同时使用。",
+        "default": ""
+      },
+      "edit_denoise": {
+        "type": "number",
+        "description": "改图时的重绘强度（0.2-1.0）。低=更贴近原图，高=改动更大。默认 0.70。仅在给了 edit_image 时生效。0.33-0.58 会让画面里的文字变成读不出来的乱码；1.0 会丢弃 VAE latent（模型看不到原图，等于重画一张），不建议用于改图。",
+        "default": 0.6,
+        "minimum": 0.2,
+        "maximum": 1.0
       },
       "batch_size": {
         "type": "integer",
@@ -168,7 +206,9 @@
         "default": ""
       }
     },
-    "required": ["nltags"],
+    "required": [
+      "nltags"
+    ],
     "additionalProperties": false
   }
 }

@@ -361,19 +361,22 @@ def _setup_routes():
     # -------------------------
     @routes.get("/moss/info")
     async def moss_info(request):
+        # 默认值统一从 executor.config 读，避免 info 与实际采样参数漂移
+        from .executor.config import MOSS_CFG, MOSS_CKPT_NAME, MOSS_SAMPLER, MOSS_STEPS
+
         return web.json_response({
             "workflow": "moss",
-            "description": "MOSS-Image 图像生成（Layout JSON 提示词 + 中英文字面文字渲染，原生分格控制）",
+            "description": "MOSS-Image 图像生成（混合 tag + nltags 提示词，原生 Layout 框位与字面文字渲染）",
             "model": {
-                "checkpoint": "moss_image_anime_turbo.safetensors",
+                "checkpoint": MOSS_CKPT_NAME,
                 "path": "models/checkpoints/",
             },
             "prompt_format": "layout_json",
             "sampling": {
-                "steps": 8,
-                "cfg": 1.0,
-                "sampler_name": "euler",
-                "scheduler": "simple",
+                "steps": MOSS_STEPS,
+                "cfg": MOSS_CFG,
+                "sampler_name": MOSS_SAMPLER[0],
+                "scheduler": MOSS_SAMPLER[1],
                 "denoise": 1.0,
                 "shift": 5,
             },
@@ -381,6 +384,11 @@ def _setup_routes():
                 "fields": ["reference_image", "reference_images"],
                 "mode": "text_encoder_vision",
                 "note": "参考图送 TE 视觉分支（TextEncodeMingImageEdit + Picture N 占位符），每张缩到约 384²，不带 VAE latent，最多 4 张",
+            },
+            "edit": {
+                "fields": ["edit_image", "edit_denoise"],
+                "mode": "vae_latent",
+                "note": "改图走 LoadImage → ImageScale → VAEEncode 作为初始 latent；未给宽高时按原图尺寸各向上取整到 16 的倍数，edit_denoise 默认 0.70（0.2-1.0）",
             },
             "endpoints": {
                 "generate": "POST /moss/generate",
