@@ -39,7 +39,7 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo 的 Turbo LoRA v1.1（强度 0.8，免补丁重映射版，非官方衍生） |
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
-| `moss_image_anime_turbo.safetensors` | `models/checkpoints/` | MOSS-Image Turbo 衍生 AIO（独立接口 `/moss/*`）：miaoka turbo1 + NSFW LoRA 0.7 融合的 INT8 fused-qkv 主采样权重 + 原生 Qwen3.5-9B TE + FLUX.2 VAE |
+| [`moss_image_anime_turbo.safetensors`](https://huggingface.co/Langzaigg/moss-image-anime-turbo) | `models/checkpoints/` | MOSS-Image Turbo 衍生 AIO（独立接口 `/moss/*`）：miaoka turbo1 + NSFW LoRA 0.7 融合的 INT8 fused-qkv 主采样权重 + 原生 Qwen3.5-9B TE + FLUX.2 VAE |
 
 模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）与 fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)；fuse v1.1 / Turbo LoRA v1.1 存档于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（已废弃）。各工作流对应的具体模型文件见其 schema / knowledge 文档。
 
