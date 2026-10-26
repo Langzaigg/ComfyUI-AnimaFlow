@@ -127,12 +127,17 @@ CYBERREAL_SAMPLER = ("euler", None)
 CYBERREAL_STEPS = 10
 CYBERREAL_CFG = 1.0
 
-# anime_turbo：MOSS-Image SFT Turbo INT8 ConvRot 的衍生主采样权重（miaoka turbo1 + nsfw LoRA 0.7 融合，
-# fused-qkv 布局）与原生 Qwen3.5-9B TE + FLUX.2 VAE 合并成的单文件 checkpoint
+# MOSS-Image：拆成三段加载（UNETLoader + CLIPLoader + VAELoader），改权重只需换 diffusion 文件。
+# 扩散权重 = MOSS-Image-SFT bf16 上叠 cute-anime(DoRA 0.3) + 4 步 turbo(1.0) + pussy(0.7) 的合并版；
+# TE = Qwen3.5-9B int8 ConvRot（type=moss_image）；VAE = FLUX.2 VAE。
 # 独立接口 /moss/*，不进 Anima 工作流注册表：提示词是 Layout JSON，不是 tag 系写法。
-# 官方推荐 CFG 1、8 步、euler + simple、无负面；新版模型 19 场景三轮实测后，
-# 项目默认 4 步 res_multistep + simple。分辨率约 1MP 且宽高为 16 的倍数。
-MOSS_CKPT_NAME = "moss_image_anime_turbo.safetensors"
+# 官方推荐 CFG 1、8 步、euler + simple、无负面；项目默认 4 步 res_multistep + simple。
+MOSS_UNET_NAME = "moss_anime_bf16_diffusion.safetensors"
+MOSS_CLIP_NAME = "mossImage_sft_txt_int8.safetensors"
+MOSS_CLIP_TYPE = "moss_image"
+MOSS_VAE_NAME = "flux2-vae.safetensors"
+# 兼容旧引用（历史代码/接口把它当 checkpoint 名）
+MOSS_CKPT_NAME = MOSS_UNET_NAME
 MOSS_SAMPLER = ("res_multistep", "simple")
 MOSS_STEPS = 4
 MOSS_CFG = 1.0
@@ -211,6 +216,11 @@ class AnimaToolConfig:
             Path(os.environ["ANIMATOOL_COMFYUI_OUTPUT_DIR"])
             if os.environ.get("ANIMATOOL_COMFYUI_OUTPUT_DIR") else None
         )
+    )
+    # MOSS 与 Anima 跨模型族切换时，先在队列空闲时卸载上一族模型并释放显存。
+    # 同族连续生成保留缓存；可用 ANIMATOOL_UNLOAD_ON_MODEL_SWITCH=0 关闭。
+    unload_on_model_switch: bool = field(
+        default_factory=lambda: _get_env_bool("ANIMATOOL_UNLOAD_ON_MODEL_SWITCH", True)
     )
 
     # 分辨率生成：当只给 aspect_ratio 时，按目标像素数估算宽高

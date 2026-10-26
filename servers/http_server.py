@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from executor import AnimaExecutor, AnimaToolConfig
 from device_guard import get_guard
-from executor.config import MOSS_CKPT_NAME, MOSS_CFG, MOSS_SAMPLER, MOSS_STEPS
+from executor.config import MOSS_UNET_NAME, MOSS_CLIP_NAME, MOSS_CLIP_TYPE, MOSS_VAE_NAME, MOSS_CFG, MOSS_SAMPLER, MOSS_STEPS
 from tagger.service import TaggerError, decode_image, list_models as list_tagger_models, tag_image
 
 # MOSS-Image 独立接口的 schema / knowledge 文件名（与 ComfyUI 路由 __init__.py 保持一致）
@@ -279,8 +279,15 @@ def create_app() -> FastAPI:
             "workflow": "moss",
             "description": "MOSS-Image 图像生成（Layout JSON 提示词 + 中英文字面文字渲染，原生分格控制）",
             "model": {
-                "checkpoint": MOSS_CKPT_NAME,
-                "path": "models/checkpoints/",
+                "diffusion_model": MOSS_UNET_NAME,
+                "text_encoder": MOSS_CLIP_NAME,
+                "text_encoder_type": MOSS_CLIP_TYPE,
+                "vae": MOSS_VAE_NAME,
+                "paths": {
+                    "diffusion_model": "models/diffusion_models/",
+                    "text_encoder": "models/text_encoders/",
+                    "vae": "models/vae/",
+                },
             },
             "prompt_format": "layout_json",
             "sampling": {

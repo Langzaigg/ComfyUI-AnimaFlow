@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MOSS BF16 三段式工作流与横评（2026-10-26）**: 默认 DiT 换为 `moss_anime_bf16_diffusion.safetensors`，改用 `UNETLoader + CLIPLoader(type=moss_image) + VAELoader` 分别加载 DiT、INT8 TE 与 FLUX.2 VAE；旧 AIO INT8 保留为历史版本。19 个同 seed 场景最终全部成功（一次设备丢失后重启续跑），相对旧版目检 14 项更好、1 项更差、4 项持平，中位耗时 27.4s 对 28.2s。默认继续使用 `res_multistep + simple + 4 步`。结果：`examples/results/moss_res_multistep_s4_20261026_153414/`。同时发布低显存变体 `moss_anime_int8_convrot_diffusion.safetensors`，已完成一次 4 步生成实测。
+
+- **MOSS ↔ Anima 跨模型族防御性卸载（2026-10-26）**: 所有 Anima 与 MOSS 生成入口统一记录上一任务模型族；跨族切换且 ComfyUI 队列空闲时先调用 `/free` 卸载模型并释放显存，避免 MOSS 残留 TE/DiT 与 Anima 加载峰值叠加。同族连续生成保留缓存；队列非空、状态查询或释放失败时不提交新任务。默认开启，可用 `ANIMATOOL_UNLOAD_ON_MODEL_SWITCH=0` 关闭。
+
 - **MOSS 新版权重及采样组合全场景复测（2026-10-24）**: 模型文件更新后卸载旧权重缓存，复跑新版 Euler 4/6 步并新增 `res_multistep + simple` 4 步，57/57 成功；与旧版 38 张同 seed 结果横评。新版画面细节、服装和复杂动作明显增强，Euler 4/6 步差距缩小；res_multistep 4 步与 Euler 4 步质量/耗时同档、部分细节略清楚。新版 Euler 4/6 与 res_multistep 4 步中位耗时 27.5/34.3/28.2s，项目默认改为 **res_multistep + simple + 4 步**。结果：`examples/results/moss_steps_20261024_171822/`、`examples/results/moss_res_multistep_s4_20261024_174055/`。
 
 - **MOSS 4/6 步全场景对比与默认步数调整（2026-10-24）**: `examples/moss_steps_test.py` 复用完整 19 场景库，同 seed、提示词和分辨率各跑一轮，38/38 成功。人工目检 6 步在部分服装、道具和局部细节上略稳，整体无跨档提升；4/6 步中位耗时 29.3/38.4s，项目默认由官方 8 步调整为实测折中值 6 步，4 步保留作快速草图档。结果与并排图：`examples/results/moss_steps_20261024_160352/`。

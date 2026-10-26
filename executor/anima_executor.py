@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, MOSS_CKPT_NAME, MOSS_SAMPLER, MOSS_STEPS, MOSS_CFG
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, MOSS_UNET_NAME, MOSS_CLIP_NAME, MOSS_CLIP_TYPE, MOSS_VAE_NAME, MOSS_SAMPLER, MOSS_STEPS, MOSS_CFG
 from .history import HistoryManager
 
 try:  # ComfyUI 内以插件包导入
@@ -271,10 +271,11 @@ _V2_MODEL_PRESETS = {
 }
 
 
-# MOSS-Image 预设：单文件 checkpoint（DiT + TE + VAE），无 LoRA 槽位，也不进 _V2_MODEL_PRESETS。
+# MOSS-Image 预设：三段式加载（UNETLoader + CLIPLoader + VAELoader），无 LoRA 槽位，也不进 _V2_MODEL_PRESETS。
 # 项目默认 4 步 / CFG 1 / res_multistep + simple（官方推荐 8 步 euler + simple） / 无负面；cfg 上限 1.6 只给显式写 neg 的实验场景。
 _MOSS_PRESET = {
-    "ckpt": MOSS_CKPT_NAME, "steps": MOSS_STEPS, "cfg": MOSS_CFG,
+    "unet": MOSS_UNET_NAME, "clip": MOSS_CLIP_NAME, "clip_type": MOSS_CLIP_TYPE, "vae": MOSS_VAE_NAME,
+    "steps": MOSS_STEPS, "cfg": MOSS_CFG,
     "steps_range": (4, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
     "sampler": MOSS_SAMPLER[0], "scheduler": MOSS_SAMPLER[1], "prefix": "MOSS_",
 }
@@ -486,7 +487,7 @@ class AnimaExecutor:
         with unified_template_path.open("r", encoding="utf-8") as f:
             self._workflow_template_unified: Dict[str, Any] = json.load(f)
 
-        # MOSS-Image 单文件 checkpoint 模板（独立接口 /moss/*，节点 id 与统一模板对齐）
+        # MOSS-Image 三段式模板（独立接口 /moss/*，节点 id 与统一模板对齐）
         moss_template_path = Path(__file__).resolve().parent / "workflow_template_moss.json"
         with moss_template_path.open("r", encoding="utf-8") as f:
             self._workflow_template_moss: Dict[str, Any] = json.load(f)
@@ -664,7 +665,7 @@ class AnimaExecutor:
     # -------------------------
     # HTTP helpers (requests 优先, 无则 urllib)
     # -------------------------
-    def _http_post_json(self, url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _http_post_json(self, url: str, payload: Dict[str, Any], *, allow_empty: bool = False) -> Dict[str, Any]:
         try:
             import requests  # type: ignore
         except Exception:
@@ -674,6 +675,8 @@ class AnimaExecutor:
         if requests is not None:
             r = requests.post(url, json=payload, timeout=self.config.timeout_s)
             r.raise_for_status()
+            if allow_empty and not r.content:
+                return {}
             return r.json()
 
         import urllib.request
@@ -681,6 +684,8 @@ class AnimaExecutor:
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=self.config.timeout_s) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
+            if allow_empty and not raw.strip():
+                return {}
             return json.loads(raw)
 
     def _http_get_json(self, url: str) -> Any:
@@ -926,7 +931,7 @@ class AnimaExecutor:
 
     def _inject_moss(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
         """
-        MOSS-Image（单文件 checkpoint，独立接口 /moss/*）工作流注入。
+        MOSS-Image（三段式加载，独立接口 /moss/*）工作流注入。
 
         提示词是 Layout JSON 而不是 tag 系写法：prompt + elements 由 compile_moss_layout
         编译成模型要求的 summary + items + abs_centralized/yxyx 单行 JSON；
@@ -936,7 +941,12 @@ class AnimaExecutor:
         prompt_json = normalize_moss_payload(prompt_json)
         wf = deepcopy(self._workflow_template_moss)
 
-        wf["1"]["inputs"]["ckpt_name"] = str(prompt_json.get("ckpt_name") or preset["ckpt"])
+        # 三段式加载：扩散权重 / 文本编码器 / VAE 各自可单独指定（改权重只需换 unet_name）
+        wf["1"]["inputs"]["unet_name"] = str(prompt_json.get("unet_name") or preset["unet"])
+        wf["2"]["inputs"]["clip_name"] = str(prompt_json.get("clip_name") or preset["clip"])
+        clip_type = str(prompt_json.get("clip_type") or preset["clip_type"])
+        wf["2"]["inputs"]["type"] = clip_type
+        wf["3"]["inputs"]["vae_name"] = str(prompt_json.get("vae_name") or preset["vae"])
 
         # 改图（p图）输入：走 VAE latent，和 reference_images（TE 视觉分支）是两条独立路径。
         # 先把图解析成 input 目录文件名（绝对路径会按内容哈希复制进去），尺寸也要读原图。
@@ -999,7 +1009,7 @@ class AnimaExecutor:
             )
             wf["6"] = {
                 "class_type": "TextEncodeMingImageEdit",
-                "inputs": {"clip": ["1", 1], "prompt": prefix + "\n\n" + positive},
+                "inputs": {"clip": ["2", 0], "prompt": prefix + "\n\n" + positive},
             }
             for index, name in enumerate(refs, 1):
                 source, scaled = str(20 + index), str(30 + index)
@@ -1029,7 +1039,7 @@ class AnimaExecutor:
                 "image": ["40", 0], "upscale_method": "lanczos",
                 "width": width, "height": height, "crop": "disabled",
             }}
-            wf["42"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["41", 0], "vae": ["1", 2]}}
+            wf["42"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["41", 0], "vae": ["3", 0]}}
             wf["19"]["inputs"]["latent_image"] = ["42", 0]
             wf["19"]["inputs"]["denoise"] = max(0.2, min(1.0, float(edit_denoise if edit_denoise is not None else 0.70)))
 
@@ -1408,6 +1418,50 @@ class AnimaExecutor:
     # -------------------------
     # ComfyUI execution
     # -------------------------
+    _MODEL_FAMILY_MARKER = ".last_model_family"
+
+    def _queue_prompt_for_family(self, prompt: Dict[str, Any], family: str) -> str:
+        """跨 MOSS / Anima 模型族时，先释放上一族模型，避免加载峰值叠加。"""
+        if family not in {"anima", "moss"}:
+            raise ValueError(f"未知模型族：{family!r}")
+
+        marker = Path(self.config.output_dir) / self._MODEL_FAMILY_MARKER
+        try:
+            previous = marker.read_text(encoding="utf-8").strip()
+        except OSError:
+            previous = ""
+
+        if self.config.unload_on_model_switch and previous in {"anima", "moss"} and previous != family:
+            queue_url = urljoin(self.config.comfyui_url.rstrip("/") + "/", "queue")
+            try:
+                queue = self._http_get_json(queue_url)
+                running = len(queue.get("queue_running", []) or [])
+                pending = len(queue.get("queue_pending", []) or [])
+            except Exception as exc:
+                raise RuntimeError(f"{previous} → {family} 切换前无法确认 ComfyUI 队列状态，未提交新任务：{exc}") from exc
+            if running or pending:
+                raise RuntimeError(
+                    f"{previous} → {family} 切换需要卸载上一族模型，但 ComfyUI 队列非空 "
+                    f"(running={running}, pending={pending})，请稍后重试"
+                )
+            try:
+                self._http_post_json(
+                    urljoin(self.config.comfyui_url.rstrip("/") + "/", "free"),
+                    {"unload_models": True, "free_memory": True},
+                    allow_empty=True,
+                )
+            except Exception as exc:
+                raise RuntimeError(f"{previous} → {family} 切换前释放模型失败，未提交新任务：{exc}") from exc
+            logger.info("[AnimaTool] %s → %s 跨模型族切换：已卸载上一族模型并释放显存", previous, family)
+
+        prompt_id = self.queue_prompt(prompt)
+        try:
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.write_text(family, encoding="utf-8")
+        except OSError as exc:
+            logger.warning("写入模型族切换标记失败 %s：%s", marker, exc)
+        return prompt_id
+
     def queue_prompt(self, prompt: Dict[str, Any]) -> str:
         url = urljoin(self.config.comfyui_url.rstrip("/") + "/", "prompt")
         payload = {"prompt": prompt, "client_id": self._client_id}
@@ -1663,7 +1717,7 @@ class AnimaExecutor:
 
         # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
         self._maybe_clean_comfyui_output()
-        prompt_id = self.queue_prompt(prompt)
+        prompt_id = self._queue_prompt_for_family(prompt, "anima")
         history_item = self.wait_history(prompt_id)
         images = self._extract_images(prompt_id, history_item)
         images = self._download_images(images)
@@ -1739,7 +1793,7 @@ class AnimaExecutor:
 
         # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
         self._maybe_clean_comfyui_output()
-        prompt_id = self.queue_prompt(prompt)
+        prompt_id = self._queue_prompt_for_family(prompt, "anima")
         history_item = self.wait_history(prompt_id)
         images = self._extract_images(prompt_id, history_item)
         images = self._download_images(images)
@@ -1809,7 +1863,7 @@ class AnimaExecutor:
             get_guard().notify_device_lost(detail)
             raise RuntimeError(
                 "MOSS 执行失败：XPU 设备上下文丢失（UR_RESULT_ERROR_DEVICE_LOST，"
-                f"prompt_id={prompt_id}）。16GB 卡上 TE(9.7GB)/DiT(5.4GB) 反复换页时容易触发，"
+                f"prompt_id={prompt_id}）。16GB 卡上 TE(9.7GB)/BF16 DiT(10.2GB) 反复换页时容易触发，"
                 "已通知设备守护按 ANIMATOOL_DEVICE_RESTART_MODE 重启。"
             )
         raise RuntimeError(f"MOSS 执行失败（prompt_id={prompt_id}）：{detail[:500]}")
@@ -1830,7 +1884,7 @@ class AnimaExecutor:
 
         # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
         self._maybe_clean_comfyui_output()
-        prompt_id = self.queue_prompt(prompt)
+        prompt_id = self._queue_prompt_for_family(prompt, "moss")
         history_item = self.wait_history(prompt_id)
         self._raise_on_moss_failure(history_item, prompt_id)
         images = self._extract_images(prompt_id, history_item)
@@ -1909,7 +1963,7 @@ class AnimaExecutor:
 
         # 月份切换后（当月第一个任务）清理 ComfyUI output，编号从 00001 重新计数
         self._maybe_clean_comfyui_output()
-        prompt_id = self.queue_prompt(prompt)
+        prompt_id = self._queue_prompt_for_family(prompt, "anima")
         history_item = self.wait_history(prompt_id)
         images = self._extract_images(prompt_id, history_item)
         images = self._download_images(images)

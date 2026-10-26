@@ -362,14 +362,21 @@ def _setup_routes():
     @routes.get("/moss/info")
     async def moss_info(request):
         # 默认值统一从 executor.config 读，避免 info 与实际采样参数漂移
-        from .executor.config import MOSS_CFG, MOSS_CKPT_NAME, MOSS_SAMPLER, MOSS_STEPS
+        from .executor.config import MOSS_CFG, MOSS_UNET_NAME, MOSS_CLIP_NAME, MOSS_CLIP_TYPE, MOSS_VAE_NAME, MOSS_SAMPLER, MOSS_STEPS
 
         return web.json_response({
             "workflow": "moss",
             "description": "MOSS-Image 图像生成（混合 tag + nltags 提示词，原生 Layout 框位与字面文字渲染）",
             "model": {
-                "checkpoint": MOSS_CKPT_NAME,
-                "path": "models/checkpoints/",
+                "diffusion_model": MOSS_UNET_NAME,
+                "text_encoder": MOSS_CLIP_NAME,
+                "text_encoder_type": MOSS_CLIP_TYPE,
+                "vae": MOSS_VAE_NAME,
+                "paths": {
+                    "diffusion_model": "models/diffusion_models/",
+                    "text_encoder": "models/text_encoders/",
+                    "vae": "models/vae/",
+                },
             },
             "prompt_format": "layout_json",
             "sampling": {

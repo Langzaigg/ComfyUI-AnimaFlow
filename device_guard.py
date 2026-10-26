@@ -1,6 +1,6 @@
 """XPU 设备守护：识别 Level Zero 上下文丢失并结束自身进程，交给外部守护拉起。
 
-Arc 上跑 MOSS-Image 这类「单文件 checkpoint = 9.7 GB 文本编码器 + 5.4 GB DiT」的模型时，
+Arc 上跑 MOSS-Image 这类「9.7 GB 文本编码器 + 10.2 GB BF16 DiT」的模型时，
 16 GB 卡装不下全部权重，每次改提示词都要把 TE 与 DiT 换进换出。换页时若显存已经吃紧，
 Level Zero 会直接复位上下文并报 `UR_RESULT_ERROR_DEVICE_LOST`。上下文一旦丢失，进程里
 所有后续 xpu 调用都会失败（连 soft_empty_cache 里的 synchronize 也会炸），只能重启进程。
