@@ -2,7 +2,7 @@
   "1": {
     "class_type": "UNETLoader",
     "inputs": {
-      "unet_name": "moss_anime_bf16_diffusion.safetensors",
+      "unet_name": "moss_anime_turbo_aio_v1.2_bf16_diffusion.safetensors",
       "weight_dtype": "default"
     }
   },

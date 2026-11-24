@@ -39,12 +39,13 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo 的 Turbo LoRA v1.1（强度 0.8，免补丁重映射版，非官方衍生） |
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
-| [`moss_anime_bf16_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_merged) | `models/diffusion_models/` | MOSS-Image BF16 二次元合并 DiT（MOSS-Image-SFT + cute-anime DoRA@0.3 + 4 步 turbo LoRA@1.0 + pussy LoRA@0.7） |
-| [`moss_anime_int8_convrot_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_merged) | `models/diffusion_models/` | 同上一模型的 INT8 ConvRot 低显存变体（已通过 ComfyUI 4 步生成实测） |
+| [`moss_anime_turbo_aio_v1.2_bf16_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_aio) | `models/diffusion_models/` | **MOSS Anime Turbo AIO v1.2** BF16 DiT（MossYume + DMD2@1.0 + pussy@0.3 + cute-anime DoRA@0.3），当前默认 |
+| [`moss_anime_turbo_aio_v1.2_int8_convrot_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_aio) | `models/diffusion_models/` | MOSS Anime Turbo AIO v1.2 的 INT8 ConvRot 低显存变体 |
+| [`moss_anime_int8_convrot_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_merged) | `models/diffusion_models/` | MOSS Anime Turbo v1.1 的 INT8 ConvRot 低显存变体（旧版） |
 | `mossImage_sft_txt_int8.safetensors` | `models/text_encoders/` | MOSS-Image Qwen3.5-9B INT8 文本编码器（`type=moss_image`） |
 | `flux2-vae.safetensors` | `models/vae/` | MOSS-Image / FLUX.2 VAE |
 
-模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）与 fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)；fuse v1.1 / Turbo LoRA v1.1 存档于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（已废弃）。MOSS 当前 BF16 合并 DiT 与 INT8 ConvRot 低显存变体发布于 [Langzaigg/moss_anime_turbo_merged](https://huggingface.co/Langzaigg/moss_anime_turbo_merged)；旧 AIO INT8 版本存档于 [Langzaigg/moss-image-anime-turbo](https://huggingface.co/Langzaigg/moss-image-anime-turbo)。各工作流对应的具体模型文件见其 schema / knowledge 文档。
+模型下载：[circlestone-labs/Anima on Hugging Face](https://huggingface.co/circlestone-labs/Anima)（base）、[Gazingstars123/Anima-2.9B](https://huggingface.co/Gazingstars123/Anima-2.9B)（2.9B）、[Turbo-ANIMA on Civitai](https://civitai.com/models/2619830/turbo-for-anima-less-steps)（Turbo LoRA 原始出处）、[SilvermoonMix Anima Evolved on Civitai](https://civitai.com/models/2639339/silvermoonmix-anima-evolved)（silvermoon / fuse v1.1 融合基底）。fuse 融合 UNET 与 Turbo LoRA 重映射版为本项目的**非官方**融合/重映射衍生（CircleStone 非商业许可）：fuse v1.2（现行）与 fuse v1.0（已过期）发布于 [Langzaigg/anima29b-turbo-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo-unofficial)；fuse v1.1 / Turbo LoRA v1.1 存档于 [Langzaigg/anima29b-turbo1.1-unofficial](https://huggingface.co/Langzaigg/anima29b-turbo1.1-unofficial)（已废弃）。MOSS 当前默认 **MOSS Anime Turbo AIO v1.2** 发布于 [Langzaigg/moss_anime_turbo_aio](https://huggingface.co/Langzaigg/moss_anime_turbo_aio)；v1.1 BF16 / INT8 变体存档于 [Langzaigg/moss_anime_turbo_merged](https://huggingface.co/Langzaigg/moss_anime_turbo_merged)，旧 AIO INT8 版本存档于 [Langzaigg/moss-image-anime-turbo](https://huggingface.co/Langzaigg/moss-image-anime-turbo)。各工作流对应的具体模型文件见其 schema / knowledge 文档。
 
 ## 使用
 
@@ -140,15 +141,15 @@ Arc 上跑 MOSS 这种「9.7 GB 文本编码器 + 10.2 GB BF16 DiT」的模型�
 每改一次提示词都要把 TE 与 DiT 换进换出。换页瞬间若显存吃紧，Level Zero 会复位上下文并报
 `UR_RESULT_ERROR_DEVICE_LOST`——之后进程内所有 xpu 调用（连 `soft_empty_cache` 里的 `synchronize`）都失败，只能重启进程。
 
-插件会在 **MOSS ↔ Anima 跨模型族切换**且队列空闲时先调用 `/free`，卸载上一族模型并释放显存；同族连续生成保留缓存。
-切换状态存于 `outputs/.last_model_family`，ComfyUI 内置 API、FastAPI 与 MCP 共用。队列非空或释放失败时会拒绝提交新任务，避免叠加加载。
+前置卸载是可选功能，默认关闭。开启后，插件会在每次 MOSS 生成及 **MOSS ↔ Anima 跨模型族切换**时，在主任务前插入独立的卸载节点；节点按队列顺序执行，卸载模型并释放显存，不会因队列非空拒绝提交。Anima 同族连续生成保留缓存。
+切换状态存于 `outputs/.last_model_family`，ComfyUI 内置 API、FastAPI 与 MCP 共用。
 
 插件内置 `device_guard.py`：后台每 20s `torch.xpu.synchronize()` 探活，**连续两次失败**才判定丢失（避免驱动抖动误杀），
 判定后**结束自身进程**，由外部守护拉起（不在插件里自己 spawn，避免和外部守护重复启动），并带冷却与次数熔断防止崩溃循环。
 
 | 环境变量 | 默认 | 说明 |
 |---|---|---|
-| `ANIMATOOL_UNLOAD_ON_MODEL_SWITCH` | `1` | MOSS ↔ Anima 切换时卸载上一族模型；填 `0` 关闭 |
+| `ANIMATOOL_UNLOAD_ON_MODEL_SWITCH` | `0` | 设为 `1` 开启 MOSS 每次生成及跨模型族切换时的前置卸载；本机启动脚本已开启 |
 | `ANIMATOOL_DEVICE_GUARD` | `1` | 关闭守护填 `0` |
 | `ANIMATOOL_DEVICE_GUARD_INTERVAL` | `20` | 探活间隔（秒） |
 | `ANIMATOOL_DEVICE_GUARD_GRACE` | `60` | 启动后多久开始探活 |

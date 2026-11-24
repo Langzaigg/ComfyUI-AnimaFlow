@@ -1419,9 +1419,63 @@ class AnimaExecutor:
     # ComfyUI execution
     # -------------------------
     _MODEL_FAMILY_MARKER = ".last_model_family"
+    # 从队列任务里识别模型族时参考的输入字段（模型 / 权重文件名）
+    _FAMILY_HINT_KEYS = (
+        "unet_name", "ckpt_name", "lora_name", "vae_name", "clip_name",
+        "model_name", "filename",
+    )
+
+    @staticmethod
+    def _queue_item_prompt(item: Any) -> Any:
+        """取出 /queue 列表元素里的 prompt 结构（兼容 list / dict 两种返回）。"""
+        if isinstance(item, (list, tuple)):
+            return item[2] if len(item) > 2 else None
+        if isinstance(item, dict):
+            return item.get("prompt")
+        return None
+
+    @classmethod
+    def _prompt_family(cls, prompt: Any) -> str:
+        """判断队列中某个任务属于哪个模型族（anima / moss / 空串 = 认不出）。"""
+        if not isinstance(prompt, dict):
+            return ""
+        hints: List[str] = []
+        for node in prompt.values():
+            if not isinstance(node, dict):
+                continue
+            hints.append(str(node.get("class_type") or ""))
+            inputs = node.get("inputs")
+            if isinstance(inputs, dict):
+                for key, value in inputs.items():
+                    if key in cls._FAMILY_HINT_KEYS and isinstance(value, str):
+                        hints.append(value)
+        text = " ".join(hints).lower()
+        if "moss" in text:
+            return "moss"
+        if "anima" in text:
+            return "anima"
+        return ""
+
+    # 卸载节点（见 __init__.py 的 AnimaUnloadModels）：作为独立 prompt 入队，
+    # 排在主任务之前执行，负责真正释放显存。
+    _UNLOAD_NODE_TYPE = "AnimaUnloadModels"
+
+    def _queue_unload_prompt(self) -> None:
+        """把「卸载模型」任务压进 ComfyUI 队列（排在主任务之前执行）。
+
+        提交阶段不碰队列、不调用 /free：卸载任务与主任务按提交顺序入队，
+        前一个任务跑完才轮到它，因此不会打断正在执行/排队的任务。
+        节点未注册（插件未重启或被禁用）时只记日志，不阻断主任务。
+        """
+        prompt = {"1": {"class_type": self._UNLOAD_NODE_TYPE, "inputs": {}}}
+        try:
+            unload_id = self.queue_prompt(prompt)
+            logger.info("[AnimaTool] 已插入前置卸载任务 %s（轮到主任务前释放显存）", unload_id)
+        except Exception as exc:
+            logger.warning("[AnimaTool] 插入前置卸载任务失败，继续提交主任务：%s", exc)
 
     def _queue_prompt_for_family(self, prompt: Dict[str, Any], family: str) -> str:
-        """跨 MOSS / Anima 模型族时，先释放上一族模型，避免加载峰值叠加。"""
+        """跨模型族/连发时先入队一个卸载任务，再提交主任务，从不阻塞提交。"""
         if family not in {"anima", "moss"}:
             raise ValueError(f"未知模型族：{family!r}")
 
@@ -1431,28 +1485,17 @@ class AnimaExecutor:
         except OSError:
             previous = ""
 
-        if self.config.unload_on_model_switch and previous in {"anima", "moss"} and previous != family:
-            queue_url = urljoin(self.config.comfyui_url.rstrip("/") + "/", "queue")
-            try:
-                queue = self._http_get_json(queue_url)
-                running = len(queue.get("queue_running", []) or [])
-                pending = len(queue.get("queue_pending", []) or [])
-            except Exception as exc:
-                raise RuntimeError(f"{previous} → {family} 切换前无法确认 ComfyUI 队列状态，未提交新任务：{exc}") from exc
-            if running or pending:
-                raise RuntimeError(
-                    f"{previous} → {family} 切换需要卸载上一族模型，但 ComfyUI 队列非空 "
-                    f"(running={running}, pending={pending})，请稍后重试"
-                )
-            try:
-                self._http_post_json(
-                    urljoin(self.config.comfyui_url.rstrip("/") + "/", "free"),
-                    {"unload_models": True, "free_memory": True},
-                    allow_empty=True,
-                )
-            except Exception as exc:
-                raise RuntimeError(f"{previous} → {family} 切换前释放模型失败，未提交新任务：{exc}") from exc
-            logger.info("[AnimaTool] %s → %s 跨模型族切换：已卸载上一族模型并释放显存", previous, family)
+        # 提交阶段不再检查队列、不再阻塞：把「卸载模型」做成一个独立的前置 prompt
+        # 一起入队。ComfyUI 按队列顺序执行，它一定排在前一个任务跑完之后、本任务
+        # 开始之前，因此既不会打断正在执行/排队的任务，又能保证本任务加载模型时
+        # 显存是干净的。
+        # - moss：每次都卸载（MOSS 连发时上一张的模型会占住显存，导致加载不全）
+        # - anima：仅跨族时卸载（同族连发保留缓存，避免每张都重新加载）
+        should_unload = family == "moss" or (
+            previous in {"anima", "moss"} and previous != family
+        )
+        if self.config.unload_on_model_switch and should_unload:
+            self._queue_unload_prompt()
 
         prompt_id = self.queue_prompt(prompt)
         try:

@@ -530,6 +530,47 @@ def _setup_routes():
 # 我们在模块加载时注册路由
 _setup_routes()
 
+
+class AnimaUnloadModels:
+    """卸载当前所有已加载模型并释放显存（无输入、无输出）。
+
+    用途：跨模型族（anima ↔ moss）或 MOSS 连发时，由调用方把本节点作为
+    一个独立 prompt **先**提交到队列。ComfyUI 按队列顺序执行，因此它一定
+    排在前一个任务跑完之后、主任务开始之前，既不会打断正在执行的任务，
+    又能保证主任务加载模型时显存是干净的。
+    """
+
+    CATEGORY = "AnimaTool"
+    FUNCTION = "unload"
+    OUTPUT_NODE = True
+    RETURN_TYPES = ()
+    DESCRIPTION = "Unload all loaded models and free VRAM before the next queued prompt."
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {}}
+
+    def unload(self):
+        import gc
+        import logging
+
+        log = logging.getLogger("anima_tool")
+        try:
+            import comfy.model_management as mm
+
+            mm.unload_all_models()
+            mm.soft_empty_cache()
+            gc.collect()
+            log.info("[AnimaTool] 队列前置卸载：已释放模型与显存")
+        except Exception as exc:
+            log.warning("[AnimaTool] 队列前置卸载失败：%s", exc)
+        return {"ui": {"anima_unloaded": [True]}}
+
+
 # ComfyUI 要求导出 NODE_CLASS_MAPPINGS（即使为空也要有）
-NODE_CLASS_MAPPINGS = {}
-NODE_DISPLAY_NAME_MAPPINGS = {}
+NODE_CLASS_MAPPINGS = {
+    "AnimaUnloadModels": AnimaUnloadModels,
+}
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "AnimaUnloadModels": "Anima Unload Models",
+}

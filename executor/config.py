@@ -128,11 +128,11 @@ CYBERREAL_STEPS = 10
 CYBERREAL_CFG = 1.0
 
 # MOSS-Image：拆成三段加载（UNETLoader + CLIPLoader + VAELoader），改权重只需换 diffusion 文件。
-# 扩散权重 = MOSS-Image-SFT bf16 上叠 cute-anime(DoRA 0.3) + 4 步 turbo(1.0) + pussy(0.7) 的合并版；
+# MOSS Anime Turbo AIO v1.2 = MossYume + DMD2(1.0) + pussy(0.3) + cute-anime DoRA(0.3)。
 # TE = Qwen3.5-9B int8 ConvRot（type=moss_image）；VAE = FLUX.2 VAE。
 # 独立接口 /moss/*，不进 Anima 工作流注册表：提示词是 Layout JSON，不是 tag 系写法。
 # 官方推荐 CFG 1、8 步、euler + simple、无负面；项目默认 4 步 res_multistep + simple。
-MOSS_UNET_NAME = "moss_anime_bf16_diffusion.safetensors"
+MOSS_UNET_NAME = "moss_anime_turbo_aio_v1.2_bf16_diffusion.safetensors"
 MOSS_CLIP_NAME = "mossImage_sft_txt_int8.safetensors"
 MOSS_CLIP_TYPE = "moss_image"
 MOSS_VAE_NAME = "flux2-vae.safetensors"
@@ -217,10 +217,10 @@ class AnimaToolConfig:
             if os.environ.get("ANIMATOOL_COMFYUI_OUTPUT_DIR") else None
         )
     )
-    # MOSS 与 Anima 跨模型族切换时，先在队列空闲时卸载上一族模型并释放显存。
-    # 同族连续生成保留缓存；可用 ANIMATOOL_UNLOAD_ON_MODEL_SWITCH=0 关闭。
+    # 可选：MOSS 每次生成、Anima 跨模型族切换时，在主任务前插入独立卸载节点。
+    # 默认关闭；本机通过 ANIMATOOL_UNLOAD_ON_MODEL_SWITCH=1 开启。
     unload_on_model_switch: bool = field(
-        default_factory=lambda: _get_env_bool("ANIMATOOL_UNLOAD_ON_MODEL_SWITCH", True)
+        default_factory=lambda: _get_env_bool("ANIMATOOL_UNLOAD_ON_MODEL_SWITCH", False)
     )
 
     # 分辨率生成：当只给 aspect_ratio 时，按目标像素数估算宽高

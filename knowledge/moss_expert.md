@@ -1,9 +1,10 @@
-# MOSS-Image（moss_anime_turbo_merged）提示词规范
+# MOSS Anime Turbo AIO v1.2 提示词规范
 
 OpenMOSS 的 5B 单流 DiT（FLUX.2 latent 空间 + Qwen3.5-9B 文本编码器 + FLUX.2 VAE）。
-本项目用的是 `moss_anime_bf16_diffusion.safetensors`：MOSS-Image-SFT 的 **bf16** 权重（fused-qkv 布局）上叠
-`moss-cute-anime`（DoRA，0.3）、MOS-SFT 4 步 turbo LoRA（1.0）与 `moss_pussy_lora_v2.0`（0.7）的 4 步合并版
-（2026-10-26 起用 bf16 版取代原 int8 合并版），配 Qwen3.5 INT8 TE 与 FLUX.2 VAE。两个卖点是**原生 Layout 框位控制**与**画面内字面文字渲染**。
+本项目默认使用 `moss_anime_turbo_aio_v1.2_bf16_diffusion.safetensors`：MossYume BF16 基底融合
+DMD2 Turbo（1.0）、`moss_pussy_lora_v2.0`（0.3）与 `moss-cute-anime`（DoRA，0.3），
+配 Qwen3.5 INT8 TE 与 FLUX.2 VAE。这里的 AIO 指整套生成配方；本文件是 DiT 分量，TE 与 VAE 分开加载。
+两个卖点是**原生 Layout 框位控制**与**画面内字面文字渲染**。
 
 提示词固定用**混合写法**：结构化 tag 字段在前，`nltags` 自然语言句子在后。
 字段名与 Anima 系完全一致，同一份人设/标签数据可以直接复用。
