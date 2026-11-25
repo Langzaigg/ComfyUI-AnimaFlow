@@ -109,22 +109,6 @@
       "title": "CLIP Text Encode (Negative Prompt)"
     }
   },
-  "51": {
-    "inputs": {
-      "PowerLoraLoaderHeaderWidget": {
-        "type": "PowerLoraLoaderHeaderWidget"
-      },
-      "➕ Add Lora": "",
-      "model": [
-        "44",
-        0
-      ]
-    },
-    "class_type": "Power Lora Loader (rgthree)",
-    "_meta": {
-      "title": "Power Lora Loader (rgthree)"
-    }
-  },
   "28": {
     "inputs": {
       "width": 1024,
@@ -148,7 +132,7 @@
       "scheduler": "simple",
       "denoise": 1,
       "model": [
-        "51",
+        "44",
         0
       ],
       "positive": [
@@ -237,31 +221,11 @@
       "title": "Checkpoint加载器（简易）"
     }
   },
-  "63": {
-    "inputs": {
-      "PowerLoraLoaderHeaderWidget": {
-        "type": "PowerLoraLoaderHeaderWidget"
-      },
-      "➕ Add Lora": "",
-      "model": [
-        "62",
-        0
-      ],
-      "clip": [
-        "62",
-        1
-      ]
-    },
-    "class_type": "Power Lora Loader (rgthree)",
-    "_meta": {
-      "title": "Power Lora Loader (rgthree)"
-    }
-  },
   "64": {
     "inputs": {
       "text": "worst quality, bad quality, low quality, normal quality, lowres, low score, bad score, average score, jpeg artifacts, bad anatomy, error",
       "clip": [
-        "63",
+        "62",
         1
       ]
     },
@@ -304,7 +268,7 @@
         0
       ],
       "clip": [
-        "63",
+        "62",
         1
       ]
     },
@@ -325,7 +289,7 @@
       "scheduler": "normal",
       "denoise": 0.3,
       "model": [
-        "63",
+        "62",
         0
       ],
       "positive": [

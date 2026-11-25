@@ -693,10 +693,7 @@ class AnimaExecutor:
     # Core workflow injection
     # -------------------------
     def _inject_unified(self, prompt_json: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        base 工作流注入：统一模板，内置 LoRA 节点强度固定 0（模型保持缓存），
-        支持用户自定义 LoRA。
-        """
+        """base 工作流注入：完整 UNET 直连采样器，支持用户自定义 LoRA。"""
         wf = deepcopy(self._workflow_template_unified)
 
         clip_name = prompt_json.get("clip_name") or self.config.clip_name
@@ -707,8 +704,6 @@ class AnimaExecutor:
         wf["44"]["inputs"]["unet_name"] = str(unet_name)
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
-        # 内置 LoRA 关闭（strength=0，仅保持模型缓存）；支持用户自定义 LoRA
-        wf["60"]["inputs"]["strength_model"] = 0.0
         self._inject_loras(wf, prompt_json.get("loras"))
 
         # 文本
@@ -792,15 +787,18 @@ class AnimaExecutor:
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
         # LoRA：预设带 "lora" 时启用（如 anima29_turbo 的 anima29b-turbolora1.1），
-        # 其余完整 UNET 模型关闭 LoRA。可用 prompt_json 的 lora_name / lora_strength 覆盖。
+        # 其余完整 UNET 模型直接连接 UNETLoader。可用 prompt_json 的 lora_name / lora_strength 覆盖。
         preset_lora = preset.get("lora")
         if preset_lora or prompt_json.get("lora_name"):
-            wf["60"]["inputs"]["lora_name"] = str(prompt_json.get("lora_name") or preset_lora)
-            wf["60"]["inputs"]["strength_model"] = float(
-                prompt_json.get("lora_strength") or preset.get("lora_strength", 1.0)
-            )
-        else:
-            wf["60"]["inputs"]["strength_model"] = 0.0
+            wf["60"] = {
+                "class_type": "LoraLoaderModelOnly",
+                "inputs": {
+                    "model": wf["19"]["inputs"]["model"],
+                    "lora_name": str(prompt_json.get("lora_name") or preset_lora),
+                    "strength_model": float(prompt_json.get("lora_strength") or preset.get("lora_strength", 1.0)),
+                },
+            }
+            wf["19"]["inputs"]["model"] = ["60", 0]
 
         # 文本（与 turbo 一致的字段拼接顺序，使用自然语言 tags）
         positive = (prompt_json.get("positive") or "").strip()
@@ -1072,8 +1070,6 @@ class AnimaExecutor:
         wf["44"]["inputs"]["unet_name"] = str(unet_name)
         wf["15"]["inputs"]["vae_name"] = str(vae_name)
 
-        # 完整 UNET，不需要额外 LoRA
-        wf["60"]["inputs"]["strength_model"] = 0.0
 
         # 文本：三段式拼接（tags + nltags + quality_meta_year_safe）
         positive = (prompt_json.get("positive") or "").strip()
@@ -1705,7 +1701,7 @@ class AnimaExecutor:
         - width / height
         - images: [{filename, url, file_path, base64, mime_type, markdown}]
         """
-        # 始终使用统一工作流（LoRA 节点始终存在，base 模式 strength=0）
+        # 始终使用统一工作流（无自定义 LoRA 时完整 UNET 直连采样器）
         mode = "base1.0"
         prompt = self._inject_unified(prompt_json)
 

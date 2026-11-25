@@ -20,17 +20,6 @@
       "vae_name": "qwen_image_vae.safetensors"
     }
   },
-  "60": {
-    "class_type": "LoraLoaderModelOnly",
-    "inputs": {
-      "model": [
-        "44",
-        0
-      ],
-      "lora_name": "anima29b-turbolora1.1.safetensors",
-      "strength_model": 0
-    }
-  },
   "11": {
     "class_type": "CLIPTextEncode",
     "inputs": {
@@ -63,7 +52,7 @@
     "class_type": "KSampler",
     "inputs": {
       "model": [
-        "60",
+        "44",
         0
       ],
       "positive": [

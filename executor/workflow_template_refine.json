@@ -17,26 +17,6 @@
       "title": "Checkpoint加载器（简易）"
     }
   },
-  "63": {
-    "inputs": {
-      "PowerLoraLoaderHeaderWidget": {
-        "type": "PowerLoraLoaderHeaderWidget"
-      },
-      "➕ Add Lora": "",
-      "model": [
-        "62",
-        0
-      ],
-      "clip": [
-        "62",
-        1
-      ]
-    },
-    "class_type": "Power Lora Loader (rgthree)",
-    "_meta": {
-      "title": "Power Lora Loader (rgthree)"
-    }
-  },
   "46": {
     "inputs": {
       "value": "masterpiece, best quality, score_7, very aesthetic"
@@ -98,7 +78,7 @@
         0
       ],
       "clip": [
-        "63",
+        "62",
         1
       ]
     },
@@ -111,7 +91,7 @@
     "inputs": {
       "text": "worst quality, bad quality, low quality, normal quality, lowres, low score, bad score, average score, jpeg artifacts, bad anatomy, error",
       "clip": [
-        "63",
+        "62",
         1
       ]
     },
@@ -159,7 +139,7 @@
       "scheduler": "normal",
       "denoise": 0.3,
       "model": [
-        "63",
+        "62",
         0
       ],
       "positive": [
