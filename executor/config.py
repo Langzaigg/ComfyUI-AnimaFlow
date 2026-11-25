@@ -46,9 +46,9 @@ DEFAULT_VAE_NAME = "qwen_image_vae.safetensors"
 # base v1.0 模型文件名
 BASE10_UNET_NAME = "anima-base-v1.0.safetensors"
 
-# 新模型 v1.0 文件名
-TURBO10_UNET_NAME = "anima-turbo-v1.1.safetensors"
-AESTHETIC10_UNET_NAME = "anima-aesthetic-v1.1.safetensors"
+# Turbo / Aesthetic v1.1 模型文件名
+TURBO11_UNET_NAME = "anima-turbo-v1.1.safetensors"
+AESTHETIC11_UNET_NAME = "anima-aesthetic-v1.1.safetensors"
 
 # UltraReal (Danrisi/UltraReal_FineTune_Anima_base1_v3) 模型文件名
 # Anima base1.0 的真实系微调：@ 前缀相机/灯光标签 + 自然语言 + @年份 score_N 后缀
@@ -92,32 +92,6 @@ ANIMA29_TURBO_STEPS = 8
 FUSE_UNET_NAME = "anima29b-sm29t-fuse1.2.safetensors"
 FUSE_SAMPLER = ("euler_ancestral", "normal")
 FUSE_STEPS = 10
-
-# Fuse v1.0（已过期，仅保留兼容）：anima-turbo-v1.1 与 anima29B_v10 融合（turbo 权重 0.8）；
-# cfg 1.2 使文字类负面生效（压制假签名/水印）
-FUSE10_UNET_NAME = "anima29b-p1-turbo1.1.safetensors"
-FUSE_DEFAULT_NEGATIVE = "text, letters, sign, logo, watermark, signature, username, artist name"
-
-# rdbt v2.0 LoRA（anima2.9b p1）：base + distilled addon 双串联，CFG 1、默认 16 步。
-# 探针实测（examples/results/anima29_rdbt_probe_20260818_210509/report.md）：
-# 双 LoRA 16 步质量追平/反超 anima29 30 步，耗时仅 1/3-1/4；仅 base 在 16/20/25 步下均不可用
-# （16 步不收敛、25 步大部分收敛但仍追不平双 LoRA 且更慢），distilled addon 是必需组件。
-RDBT_BASE_LORA_NAME = "rdbt_v2.0_base_anima2.9b_p1_lora.safetensors"
-RDBT_DISTILLED_ADDON_LORA_NAME = "rdbt_v2.0_distilled_addon_anima2.9b_p1_lora.safetensors"
-RDBT_STEPS = 16
-
-# AuraAnima 2.9B qpolaP101 Int8 W8a8 量化模型文件名
-# anima29 的量化变体：质量与 BF16 同档（48 张完整场景测试无量化 artifacts），
-# 速度与 BF16 同档（~2.7 s/步），体积/显存约减半。
-# aura=精度重视（er_sde+beta 12 步，完整测试 11/12 场景质量第一），
-# aura-speed=速度重视（euler+simple 10 步，批量/简单场景/复杂构图噱头用）。
-# 风格质量标签三选一：anime color（动画，配画师 tag）/ photo real（写实，默认，勿配画师 tag）/ real skin（写实肤质，同勿配画师 tag）。
-AURA_UNET_NAME = "auranima29B_qpolaP101Int8W8a8.safetensors"
-AURA_SAMPLER = ("er_sde", "beta")
-AURA_STEPS = 12
-AURA_SPEED_SAMPLER = ("euler", "simple")
-AURA_SPEED_STEPS = 10
-AURA_CFG = 5.0
 
 # CyberRealistic Anima v7.0 Turbo BF16（写实向微调，基于 Anima Turbo V1.1）模型文件名
 # 官方推荐：CFG 1-1.5，steps 8-12；基于 turbo 1.1，采样沿用 turbo 系组合 euler。

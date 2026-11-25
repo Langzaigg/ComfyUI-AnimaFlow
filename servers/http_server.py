@@ -43,7 +43,7 @@ MOSS_KNOWLEDGE = {
 class GenerateRequest(BaseModel):
     # 允许任意字段（由 tool schema 约束；服务端只做最小校验）
     payload: Dict[str, Any] = Field(default_factory=dict)
-    # 工作流选择：base / turbo_v1 / fuse / fuse1.0 / aesthetic_v1 / ultrareal / silvermoon / silvermoon_turbo / anima29 / anima29_turbo / anima29_rdbt / aura / aura-speed / cyberreal，缺省 base
+    # 工作流选择：base / turbo_v1.1 / fuse / aesthetic_v1.1 / ultrareal / silvermoon / silvermoon_turbo / anima29 / anima29_turbo / cyberreal，缺省 base
     workflow: Optional[str] = Field(default=None)
 
 
@@ -96,7 +96,7 @@ WORKFLOWS = {
             "prompt_examples": "prompt_examples.md",
         },
     },
-    "turbo_v1": {
+    "turbo_v1.1": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
         "schema": "tool_schema_simple_turbo.json",
         "knowledge": _TURBO_V1_KNOWLEDGE,
@@ -109,16 +109,7 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
-    "fuse1.0": {
-        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档，已过期）",
-        "schema": "tool_schema_fuse10.json",
-        "knowledge": {
-            "fuse_expert": "fuse10_expert.md",
-            "artist_list": "artist_list.md",
-        },
-        "deprecated": True,
-    },
-    "aesthetic_v1": {
+    "aesthetic_v1.1": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_simple.json",
         "knowledge": _SIMPLE_KNOWLEDGE,
@@ -149,7 +140,6 @@ WORKFLOWS = {
             "artist_list": "artist_list.md",
         },
     },
-    # Anima 2.9B 家族：anima29 / anima29_turbo / anima29_rdbt 各有独立 schema 与 knowledge 文件
     "anima29": {
         "description": "AnimaTool 图像生成（Anima 系二次元插画）",
         "schema": "tool_schema_anima29.json",
@@ -163,30 +153,6 @@ WORKFLOWS = {
         "schema": "tool_schema_anima29_turbo.json",
         "knowledge": {
             "anima29_turbo_expert": "anima29_turbo_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "anima29_rdbt": {
-        "description": "AnimaTool 图像生成（Anima 系二次元插画，turbo 快速档）",
-        "schema": "tool_schema_anima29_rdbt.json",
-        "knowledge": {
-            "anima29_rdbt_expert": "anima29_rdbt_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "aura": {
-        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
-        "schema": "tool_schema_aura.json",
-        "knowledge": {
-            "aura_expert": "aura_expert.md",
-            "artist_list": "artist_list.md",
-        },
-    },
-    "aura-speed": {
-        "description": "AnimaTool 图像生成（Anima 系二次元插画）",
-        "schema": "tool_schema_aura_speed.json",
-        "knowledge": {
-            "aura_speed_expert": "aura_speed_expert.md",
             "artist_list": "artist_list.md",
         },
     },
@@ -219,14 +185,12 @@ def create_app() -> FastAPI:
         return wf
 
     def _generate_dispatch(workflow: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        if workflow == "turbo_v1":
-            return executor.generate_v2(payload, "turbo1.0")
+        if workflow == "turbo_v1.1":
+            return executor.generate_v2(payload, "turbo1.1")
         if workflow == "fuse":
             return executor.generate_v2(payload, "fuse")
-        if workflow == "fuse1.0":
-            return executor.generate_v2(payload, "fuse1.0")
-        if workflow == "aesthetic_v1":
-            return executor.generate_v2(payload, "aesthetic1.0")
+        if workflow == "aesthetic_v1.1":
+            return executor.generate_v2(payload, "aesthetic1.1")
         if workflow == "ultrareal":
             return executor.generate_ultrareal(payload)
         if workflow == "silvermoon":
@@ -237,12 +201,6 @@ def create_app() -> FastAPI:
             return executor.generate_v2(payload, "anima29")
         if workflow == "anima29_turbo":
             return executor.generate_v2(payload, "anima29_turbo")
-        if workflow == "anima29_rdbt":
-            return executor.generate_v2(payload, "anima29_rdbt")
-        if workflow == "aura":
-            return executor.generate_v2(payload, "aura")
-        if workflow == "aura-speed":
-            return executor.generate_v2(payload, "aura-speed")
         if workflow == "cyberreal":
             return executor.generate_v2(payload, "cyberreal")
         return executor.generate(payload)

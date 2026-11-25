@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, urljoin
 
-from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO10_UNET_NAME, AESTHETIC10_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, RDBT_BASE_LORA_NAME, RDBT_DISTILLED_ADDON_LORA_NAME, RDBT_STEPS, AURA_UNET_NAME, AURA_SAMPLER, AURA_STEPS, AURA_SPEED_SAMPLER, AURA_SPEED_STEPS, AURA_CFG, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, FUSE10_UNET_NAME, FUSE_DEFAULT_NEGATIVE, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, MOSS_UNET_NAME, MOSS_CLIP_NAME, MOSS_CLIP_TYPE, MOSS_VAE_NAME, MOSS_SAMPLER, MOSS_STEPS, MOSS_CFG
+from .config import AnimaToolConfig, BASE10_UNET_NAME, TURBO11_UNET_NAME, AESTHETIC11_UNET_NAME, ULTRAREAL_UNET_NAME, ULTRAREAL_SAMPLER, ULTRAREAL_STEPS, ULTRAREAL_CFG, SILVERMOON_UNET_NAME, SILVERMOON_SAMPLER, SILVERMOON_STEPS, SILVERMOON_CFG, SILVERMOON_TURBO_UNET_NAME, SILVERMOON_TURBO_STEPS, ANIMA29_UNET_NAME, ANIMA29_SAMPLER, ANIMA29_STEPS, ANIMA29_CFG, ANIMA29_TURBO_LORA_NAME, ANIMA29_TURBO_STEPS, FUSE_UNET_NAME, FUSE_SAMPLER, FUSE_STEPS, CYBERREAL_UNET_NAME, CYBERREAL_SAMPLER, CYBERREAL_STEPS, CYBERREAL_CFG, MOSS_UNET_NAME, MOSS_CLIP_NAME, MOSS_CLIP_TYPE, MOSS_VAE_NAME, MOSS_SAMPLER, MOSS_STEPS, MOSS_CFG
 from .history import HistoryManager
 
 try:  # ComfyUI 内以插件包导入
@@ -141,7 +141,7 @@ def build_ultrareal_negative_text(prompt_json: Dict[str, Any]) -> str:
 
 def build_new_models_negative_text(prompt_json: Dict[str, Any]) -> str:
     """
-    新模型（turbo-v1.0 / aesthetic-v1.0）默认负面提示词。
+    新模型（turbo-v1.1 / aesthetic-v1.1）默认负面提示词。
     保留 base 设计，但**不包含质量标签**。根据 quality_meta_year_safe 中的安全等级追加对立约束。
     """
     q = (prompt_json.get("quality_meta_year_safe") or "").lower()
@@ -184,8 +184,8 @@ def build_anima_positive_text(prompt_json: Dict[str, Any]) -> str:
 # v2 统一工作流的模型预设：默认 UNET、采样参数（默认值与取值范围均为各模型官方推荐）、
 # 默认采样组合、文件名前缀。steps_range / cfg_range 为 None 表示不限制。
 _V2_MODEL_PRESETS = {
-    "turbo1.0": {
-        "unet": TURBO10_UNET_NAME, "steps": 10, "cfg": 1.0,
+    "turbo1.1": {
+        "unet": TURBO11_UNET_NAME, "steps": 10, "cfg": 1.0,
         "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_turbo_v1_",
     },
@@ -197,17 +197,8 @@ _V2_MODEL_PRESETS = {
         "steps_range": (8, 12), "cfg_range": (1.0, 1.0),
         "sampler": FUSE_SAMPLER[0], "scheduler": FUSE_SAMPLER[1], "prefix": "AnimaTool_fuse_",
     },
-    # fuse1.0（已过期）：turbo 1.1 × Anima 2.9B preview1 融合 UNET anima29b-p1-turbo1.1
-    # （turbo 权重 0.8，40 块），turbo 提示词体系 + anima29 采样组合；
-    # default_negative 常驻 → 默认按 cfg_neg 1.2 采样，文字类负面生效以压制假签名/水印。
-    "fuse1.0": {
-        "unet": FUSE10_UNET_NAME, "steps": 8, "cfg": 1.0,
-        "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
-        "sampler": "euler", "scheduler": "sgm_uniform", "prefix": "AnimaTool_fuse10_",
-        "default_negative": FUSE_DEFAULT_NEGATIVE,
-    },
-    "aesthetic1.0": {
-        "unet": AESTHETIC10_UNET_NAME, "steps": 35, "cfg": 4.0,
+    "aesthetic1.1": {
+        "unet": AESTHETIC11_UNET_NAME, "steps": 35, "cfg": 4.0,
         "steps_range": None, "cfg_range": None,
         "sampler": "euler", "scheduler": None, "prefix": "AnimaTool_aesthetic_",
     },
@@ -235,29 +226,6 @@ _V2_MODEL_PRESETS = {
         "steps_range": (8, 12), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
         "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_turbo_",
         "lora": ANIMA29_TURBO_LORA_NAME, "lora_strength": 0.8,
-    },
-    # rdbt v2.0：base LoRA + distilled addon LoRA 双串联（lora_addon 在第一个 LoRA 之后链入）。
-    # 探针结论：16 步 cfg1 双 LoRA 为 anima29 系性价比最优；仅 base（无 addon）在任何步数下均不可用。
-    # cfg 规则同 turbo 系：1.0-1.6，有 neg 默认 1.2 使负面生效，无 neg 默认 1.0。
-    "anima29_rdbt": {
-        "unet": ANIMA29_UNET_NAME, "steps": RDBT_STEPS, "cfg": 1.0,
-        "steps_range": (8, 32), "cfg_range": (1.0, 1.6), "cfg_neg": 1.2,
-        "sampler": ANIMA29_SAMPLER[0], "scheduler": ANIMA29_SAMPLER[1], "prefix": "AnimaTool_anima29_rdbt_",
-        "lora": RDBT_BASE_LORA_NAME, "lora_strength": 1.0,
-        "lora_addon": RDBT_DISTILLED_ADDON_LORA_NAME, "lora_addon_strength": 1.0,
-    },
-    # AuraAnima 2.9B qpolaP101 Int8 W8a8：anima29 量化变体（质量/速度均与 BF16 同档，显存约减半）。
-    # aura=精度重视 er_sde+beta 12 步；aura-speed=速度重视 euler+simple 10 步。cfg 4.0-5.0 可调，默认 5.0。
-    # 风格质量标签由调用方在 quality_meta_year_safe 给出（默认 photo real，可选 anime color / real skin）。
-    "aura": {
-        "unet": AURA_UNET_NAME, "steps": AURA_STEPS, "cfg": AURA_CFG,
-        "steps_range": (8, 30), "cfg_range": (4.0, 5.0),
-        "sampler": AURA_SAMPLER[0], "scheduler": AURA_SAMPLER[1], "prefix": "AnimaTool_aura_",
-    },
-    "aura-speed": {
-        "unet": AURA_UNET_NAME, "steps": AURA_SPEED_STEPS, "cfg": AURA_CFG,
-        "steps_range": (8, 30), "cfg_range": (4.0, 5.0),
-        "sampler": AURA_SPEED_SAMPLER[0], "scheduler": AURA_SPEED_SAMPLER[1], "prefix": "AnimaTool_aura_speed_",
     },
     # CyberRealistic Anima v7.0 Turbo：写实向微调（基于 Anima Turbo V1.1）。
     # 官方推荐 cfg 1-1.5 / steps 8-12；turbo 系规则：默认 cfg 1.0 负面惰性，
@@ -802,10 +770,10 @@ class AnimaExecutor:
 
     def _inject_v2(self, prompt_json: Dict[str, Any], model: str) -> Dict[str, Any]:
         """
-        新模型 v1.0 统一工作流注入：turbo-v1.0、aesthetic-v1.0、silvermoon、anima29 等共用同一模板。
+        v2 统一工作流注入：turbo-v1.1、aesthetic-v1.1、silvermoon、anima29 等共用同一模板。
         完整 UNET 的模型 LoRA 关闭；预设带 "lora" 的变体（如 anima29_turbo）启用对应 LoRA。
 
-        model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / silvermoon / anima29 等）
+        model: 见 _V2_MODEL_PRESETS 的键（turbo1.1 / aesthetic1.1 / silvermoon / anima29 等）
         """
         preset = _V2_MODEL_PRESETS.get(model)
         if preset is None:
@@ -833,23 +801,6 @@ class AnimaExecutor:
             )
         else:
             wf["60"]["inputs"]["strength_model"] = 0.0
-
-        # 预设可再带 "lora_addon"（如 anima29_rdbt 的 rdbt distilled addon）：
-        # 在第一个 LoRA(60) 与 KSampler(19) 之间串联第二个 LoraLoaderModelOnly（与 _inject_loras 同构）。
-        # addon 依赖第一个 LoRA 处于启用状态（strength>0），否则跳过。
-        preset_lora_addon = preset.get("lora_addon")
-        if preset_lora_addon and float(wf["60"]["inputs"].get("strength_model") or 0) > 0:
-            numeric_ids = [int(k) for k in wf.keys() if str(k).isdigit()]
-            addon_id = str(max(numeric_ids) + 1)
-            wf[addon_id] = {
-                "class_type": "LoraLoaderModelOnly",
-                "inputs": {
-                    "model": wf["19"]["inputs"]["model"],
-                    "lora_name": str(preset_lora_addon),
-                    "strength_model": float(preset.get("lora_addon_strength", 1.0)),
-                },
-            }
-            wf["19"]["inputs"]["model"] = [addon_id, 0]
 
         # 文本（与 turbo 一致的字段拼接顺序，使用自然语言 tags）
         positive = (prompt_json.get("positive") or "").strip()
@@ -1826,10 +1777,10 @@ class AnimaExecutor:
 
     def generate_v2(self, prompt_json: Dict[str, Any], model: str) -> Dict[str, Any]:
         """
-        新模型 v1.0 统一生成入口。
+        v2 统一生成入口。
 
         参数：
-        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.0 / aesthetic1.0 / silvermoon / anima29 等）
+        - model: 见 _V2_MODEL_PRESETS 的键（turbo1.1 / aesthetic1.1 / silvermoon / anima29 等）
         - 其余字段与 turbo 模式一致，使用自然语言 tags
         """
         prompt = self._inject_v2(prompt_json, model)

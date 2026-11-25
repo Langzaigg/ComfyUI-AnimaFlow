@@ -2,7 +2,7 @@
 
 Fuse v1.2（`anima29b-sm29t-fuse1.2`）：fuse v1.1（silvermoonmixAnima_v2329BTurbo × anima-turbo-v1.1 按 0.3/0.7 加权融合，非官方衍生）融合 NextGen 2.9bV1 LoRA@0.3。v1.1 本体见下。
 原始出处：SilvermoonMix Anima Evolved <https://civitai.com/models/2639339/silvermoonmix-anima-evolved>。
-turbo 提示词体系：质量词有效，字段写法与 turbo_v1 一致；采样为 Euler a + normal 8-12 步（默认 10），cfg 固定 1.0。
+turbo 提示词体系：质量词有效，字段写法与 turbo_v1.1 一致；采样为 Euler a + normal 8-12 步（默认 10），cfg 固定 1.0。
 
 ## 字段规则
 

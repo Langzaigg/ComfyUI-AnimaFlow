@@ -1,6 +1,6 @@
 # AnimaFlow
 
-> 前身 ComfyUI-AnimaTool。把 ComfyUI 上的 Anima 系列模型包装成 AI Agent 可直接调用的统一 Tool Use API，现已整合 **Anima 2.9B 系列全套工作流**：完整模型、Turbo LoRA（8 步）、融合 UNET（8 步）、rdbt 双 LoRA（16 步）与 Aura Int8 量化。
+> 前身 ComfyUI-AnimaTool。把 ComfyUI 上的 Anima 系列模型包装成 AI Agent 可直接调用的统一 Tool Use API，现已整合 **Anima 2.9B 完整模型、Turbo LoRA（8 步）与融合 UNET（10 步）**。
 
 <p align="center">
   Cursor / Claude / Gemini / OpenAI → MCP / HTTP API → ComfyUI → Anima 模型
@@ -8,8 +8,8 @@
 
 ## 特性
 
-- **整合 Anima 2.9B 系列**：`anima29` 完整 UNET + `anima29_turbo`（Turbo LoRA，8 步）+ `fuse`（融合 UNET，10 步，cfg 固定 1.0 无负面）+ `anima29_rdbt`（rdbt v2.0 双 LoRA，16 步）+ `aura` / `aura_speed`（Int8 量化，显存减半），质量与速度多档可选
-- **多工作流统一 API**：base / turbo 系 / 2.9B / Aura 等多模型，通过 `workflow` 参数切换
+- **整合 Anima 2.9B 系列**：`anima29` 完整 UNET + `anima29_turbo`（Turbo LoRA，8 步）+ `fuse`（融合 UNET，10 步，cfg 固定 1.0 无负面），质量与速度多档可选
+- **多工作流统一 API**：base / turbo 系 / 2.9B 等多模型，通过 `workflow` 参数切换
 - **工作流发现 API**：`GET /anima/workflows` 返回全部工作流的 schema、知识与弃用状态，下游服务启动时动态拉取即可，工作流增删改无需额外适配
 - **人设库 API**：`/anima/characters` 维护角色人设（外观标签、造型、画师、自然语言描述），支持文本按名称/别名匹配与批量导入，供 Web 画图前端、聊天机器人等下游共用；数据存本地 JSON 文件，含私人设定不进仓库
 - **图像反推 API**：`/anima/reverse_tag` 把参考图反推为 Danbooru 标签 + 映射好的 Anima 生成字段（分级/人数/角色/作品/标签），本地推理固定 CPU、不占显存（不与生成模型抢显存）
@@ -35,13 +35,12 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 |------|------|------|
 | `anima-preview.safetensors` | `models/diffusion_models/` | Anima base UNET |
 | `anima29B_v10.safetensors` | `models/diffusion_models/` | Anima 2.9B UNET |
-| `anima29b-sm29t-fuse1.2.safetensors` | `models/diffusion_models/` | fuse 融合 UNET v1.2（v1.1 融合 NextGen 2.9bV1 LoRA@0.3，非官方衍生；旧版 fuse1.0 对应 `anima29b-p1-turbo1.1.safetensors`，已过期） |
+| `anima29b-sm29t-fuse1.2.safetensors` | `models/diffusion_models/` | fuse 融合 UNET v1.2（v1.1 融合 NextGen 2.9bV1 LoRA@0.3，非官方衍生） |
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo 的 Turbo LoRA v1.1（强度 0.8，免补丁重映射版，非官方衍生） |
 | `qwen_3_06b_base.safetensors` | `models/text_encoders/` | Qwen3 CLIP |
 | `qwen_image_vae.safetensors` | `models/vae/` | VAE |
 | [`moss_anime_turbo_aio_v1.2_bf16_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_aio) | `models/diffusion_models/` | **MOSS Anime Turbo AIO v1.2** BF16 DiT（MossYume + DMD2@1.0 + pussy@0.3 + cute-anime DoRA@0.3），当前默认 |
 | [`moss_anime_turbo_aio_v1.2_int8_convrot_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_aio) | `models/diffusion_models/` | MOSS Anime Turbo AIO v1.2 的 INT8 ConvRot 低显存变体 |
-| [`moss_anime_int8_convrot_diffusion.safetensors`](https://huggingface.co/Langzaigg/moss_anime_turbo_merged) | `models/diffusion_models/` | MOSS Anime Turbo v1.1 的 INT8 ConvRot 低显存变体（旧版） |
 | `mossImage_sft_txt_int8.safetensors` | `models/text_encoders/` | MOSS-Image Qwen3.5-9B INT8 文本编码器（`type=moss_image`） |
 | `flux2-vae.safetensors` | `models/vae/` | MOSS-Image / FLUX.2 VAE |
 
@@ -257,13 +256,10 @@ MCP 客户端直接让 AI 调用 `reverse_tag_image` 工具（`image_path` / `im
 | 工作流 | 说明 |
 |--------|------|
 | `anima29_turbo` | Anima 2.9B + Turbo LoRA v1.1（默认 8 步）——速度优先推荐 |
-| `fuse` | Silvermoon29 Turbo × turbo 1.1 融合 UNET v1.2（v1.1 + NextGen 2.9bV1 LoRA@0.3；默认 10 步，cfg 固定 1，Euler a，无负面） |
-| `fuse1.0` | （已过期）turbo × Anima 2.9B 融合 UNET v1.0（默认 8 步，内置文字类负面） |
-| `anima29_rdbt` | Anima 2.9B + rdbt v2.0 双 LoRA（默认 16 步）——质量/速度均衡最优 |
+| `fuse` | Silvermoon29 Turbo × turbo 1.1 融合 UNET v1.2（默认 10 步，cfg 固定 1，Euler a，无负面） |
 | `anima29` | Anima 2.9B 完整 UNET（cfg 3.5-5，默认 30 步）——质量优先 |
-| `aura` / `aura_speed` | AuraAnima 2.9B Int8 量化，精度重视（er_sde+beta, 12 步）/ 速度重视（euler+simple, 10 步），显存约为 BF16 一半 |
 | `base` | Anima base 1.0 完整字段工作流（默认） |
-| `turbo_v1` / `aesthetic_v1` | Turbo 1.0 独立 UNET / Aesthetic 1.0 高质量微调 |
+| `turbo_v1.1` / `aesthetic_v1.1` | Turbo 1.1 独立 UNET / Aesthetic 1.1 高质量微调 |
 | `ultrareal` / `silvermoon` / `silvermoon_turbo` | 写实照片风微调 / Silvermoon 混合模型（24 步）/ 其 Turbo 变体（10 步 cfg 1） |
 | `cyberreal` | CyberRealistic Anima v7.0 Turbo（写实插画微调，默认 10 步 cfg 1，euler） |
 
@@ -277,26 +273,20 @@ MCP 客户端直接让 AI 调用 `reverse_tag_image` 工具（`image_path` / `im
 
 **Anima 2.9B 系列（当前主力）**——提示词用自然语言长句 + Danbooru 标签混合，**不要**质量/分数标签，画师/角色/作品标签避免 `_`：
 
-- `anima29`：质量天花板。cfg>1 负面提示词正常生效，细节刻画与复杂构图最好；代价是 30 步起步、BF16 显存约 16GB。适合最终成稿。
-- `anima29_rdbt`：双 LoRA 蒸馏加速，16 步实测追平甚至反超 anima29 的 30 步，细节保留完整，是 2.9 系**性价比最优**的日常选择。
+- `anima29`：细节刻画与复杂构图突出；代价是 30 步起步、BF16 显存约 16GB。适合最终成稿。
 - `anima29_turbo`：8 步出图，速度最快档。负面首选**正向写法**规避；管不住的元素写 `neg`（默认以 cfg 1.2 生效），不写 neg 时默认 cfg 1.0。适合快速迭代、聊天实时出图。
-- `fuse`：Silvermoon29 Turbo 与 turbo 1.1 的融合 UNET，10 步 Euler a + normal，cfg 固定 1、无负面；提示词走 turbo 体系（质量词有效）。现行 v1.2 在 v1.1 上融合 NextGen 2.9bV1 LoRA@0.3（NSFW 解剖细节提升，SFW 无带偏，见 `examples/nextgen_lora_strength_test.py` 横评）；旧版 v1.0（turbo × Anima 2.9B，8 步，内置文字类负面）保留为已过期的 `fuse1.0`。
+- `fuse`：Silvermoon29 Turbo 与 turbo 1.1 的融合 UNET，10 步 Euler a + normal，cfg 固定 1、无负面；提示词走 turbo 体系（质量词有效）。现行 v1.2 在 v1.1 上融合 NextGen 2.9bV1 LoRA@0.3。
 
 fuse 示例（v1.1 时期出图；v1.2 沿用同采样参数，仅融合 NextGen LoRA）：
 
 ![Fuse v1.1 示例：野餐](assets/example_fuse11_picnic.png)
 ![Fuse v1.1 示例：兔酱秋装](assets/example_fuse11_tuchan_autumn.png)
 
-**Aura 系列（Int8 量化）**——显存约为 BF16 一半，质量与速度却与 BF16 anima29 同档，cfg>1 负面生效。提示词在 anima29 规范基础上加风格标签三选一：`photo real`（默认，写实辅助）/ `anime color`（动漫辅助，可配画师 tag）/ `real skin`：
-
-- `aura`：精度重视（er_sde+beta，12 步），复杂场景与画质优先。
-- `aura_speed`：速度重视（euler+simple，10 步），批量、迭代、简单场景优先。
-
 **经典系列（base 1.0 谱系）**——提示词为 tag 系规范：质量/年份/安全标签必备，画师必须带 `@`：
 
 - `base`：字段最完整的工作流（默认），提示词体系最成熟，兼容性最好。
-- `turbo_v1`：老一代快速方案（独立 UNET，8-12 步），画风偏经典日系，适合怀旧风格或对比测试。
-- `aesthetic_v1`：高质量微调（20-60 步），适合慢工出细活。
+- `turbo_v1.1`：独立 Turbo 1.1 UNET，8-12 步，画风偏经典日系。
+- `aesthetic_v1.1`：Aesthetic 1.1 高质量微调（20-60 步），适合慢工出细活。
 - `ultrareal`：写实照片风微调，提示词为「@前缀标签 + 自然语言 + @年份/score 后缀」三段式，与其他工作流差异最大。
 - `silvermoon`：混合模型（24 步），score_N 质量前缀，画面明亮清透，介于动漫与半写实之间。
 - `silvermoon_turbo`：v2329B 的 Turbo 变体（10 步 cfg 1，Euler a + normal，无负面），silvermoon 画风的快速档。

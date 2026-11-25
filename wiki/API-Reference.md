@@ -166,22 +166,18 @@ JSON 文本：`rating` / `character` / `general`（含置信度）、`character_
 | workflow | 说明 |
 |----------|------|
 | `base`（缺省） | Base 1.0：完整字段工作流 |
-| `turbo_v1` | Turbo 1.0（实为 1.1）：独立完整 UNET 快速生成 |
+| `turbo_v1.1` | Turbo 1.1：独立完整 UNET 快速生成 |
 | `fuse` | Fuse v1.2：Silvermoon29 Turbo × turbo 1.1 融合 UNET + NextGen 2.9bV1 LoRA@0.3 快速生成（cfg 固定 1，无负面，Euler a，steps 8-12 默认 10） |
-| `fuse1.0`（已过期） | Fuse v1.0：turbo 1.1 × Anima 2.9B P1 融合 UNET（内置文字类负面，默认 cfg 1.2） |
-| `aesthetic_v1` | Aesthetic 1.0：高质量微调完整 UNET |
+| `aesthetic_v1.1` | Aesthetic 1.1：高质量微调完整 UNET |
 | `ultrareal` | UltraReal (UltraReal_FineTune_Anima_base1_v3)：真实系微调，写实照片风（@前缀标签+自然语言+@年份/score 后缀三段式） |
 | `silvermoon` | Silvermoon (silvermoonmixAnima_v2329B)：混合模型（cfg 4-5，steps 20-28 默认 24，Euler a + normal，无负面），score_N 质量前缀 |
 | `silvermoon_turbo` | Silvermoon v2329B Turbo：快速变体（cfg 1-1.6 默认 1，steps 8-12 默认 10，Euler a + normal，无负面） |
 | `anima29` | Anima 2.9B v1.0：base 层扩展微调（cfg 3.5-5，steps 28-50 默认 30，euler + sgm_uniform） |
 | `anima29_turbo` | Anima 2.9B + anima29b-turbolora1.1 LoRA（Turbo-ANIMA-v4 重映射版，强度 0.8，cfg 1-1.6，steps 8-12 默认 8） |
-| `anima29_rdbt` | Anima 2.9B + rdbt v2.0 双 LoRA（cfg 1-1.6，steps 8-32 默认 16） |
-| `aura` | AuraAnima 2.9B Int8 量化·精度重视（er_sde+beta，steps 默认 12，cfg 4-5） |
-| `aura-speed` | AuraAnima 2.9B Int8 量化·速度重视（euler+simple，steps 默认 10，cfg 4-5） |
 | `cyberreal` | CyberRealistic Anima v7.0 Turbo：写实插画微调（基于 Anima Turbo V1.1，cfg 1-1.5 默认 1，steps 8-12 默认 10，euler），score_N + 风格槽提示词 |
 
-- `GET /anima/schema?workflow=turbo_v1` — 返回对应工作流的 Tool Schema
-- `GET /anima/knowledge?workflow=turbo_v1` — 返回对应工作流的专家知识
+- `GET /anima/schema?workflow=turbo_v1.1` — 返回对应工作流的 Tool Schema
+- `GET /anima/knowledge?workflow=turbo_v1.1` — 返回对应工作流的专家知识
 - `POST /anima/generate?workflow=fuse` 或在请求体顶层加 `"workflow": "fuse"` — 用对应工作流生成
 - `GET /anima/workflows` — 列出所有可用工作流及缺省值
 
@@ -415,17 +411,17 @@ JSON 文本：`rating` / `character` / `general`（含置信度）、`character_
 
 ---
 
-### Turbo v1.0 端点
+### Turbo v1.1 端点
 
-Turbo v1.0 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 `neg` 字段。
+Turbo v1.1 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 `neg` 字段。
 
 #### GET /anima/schema_turbo_v1
 
-返回 Turbo v1.0 Schema（简化字段，包含 `neg`，`cfg` 范围 1.0-1.6，`steps` 范围 8-12）。
+返回 Turbo v1.1 Schema（简化字段，包含 `neg`，`cfg` 范围 1.0-1.6，`steps` 范围 8-12）。
 
 #### POST /anima/generate_turbo_v1
 
-执行 Turbo v1.0 生成。
+执行 Turbo v1.1 生成。
 
 **请求体**：
 
@@ -451,17 +447,17 @@ Turbo v1.0 是独立完整 UNET 模型，不依赖 LoRA。简化字段，拥有 
 
 ---
 
-### Aesthetic v1.0 端点
+### Aesthetic v1.1 端点
 
-Aesthetic v1.0 是完整 UNET 模型，在高质量图像上微调。简化字段与 Turbo v1.0 相同，但 `cfg`/`steps` 范围与 base 一致。
+Aesthetic v1.1 是完整 UNET 模型，在高质量图像上微调。简化字段与 Turbo v1.1 相同，但 `cfg`/`steps` 范围与 base 一致。
 
 #### GET /anima/schema_aesthetic_v1
 
-返回 Aesthetic v1.0 Schema（字段与 Turbo v1.0 相同，`cfg` 范围 3-8，`steps` 范围 20-60）。
+返回 Aesthetic v1.1 Schema（字段与 Turbo v1.1 相同，`cfg` 范围 3-8，`steps` 范围 20-60）。
 
 #### POST /anima/generate_aesthetic_v1
 
-执行 Aesthetic v1.0 生成。请求/响应格式与 `/anima/generate_turbo_v1` 一致，但 `steps` 默认 35，`cfg` 默认 4。
+执行 Aesthetic v1.1 生成。请求/响应格式与 `/anima/generate_turbo_v1` 一致，但 `steps` 默认 35，`cfg` 默认 4。
 
 ---
 
@@ -469,7 +465,7 @@ Aesthetic v1.0 是完整 UNET 模型，在高质量图像上微调。简化字�
 
 #### GET /anima/knowledge_new_models
 
-返回 Turbo v1.0 / Aesthetic v1.0 共享的专家知识：
+返回 Turbo v1.1 / Aesthetic v1.1 共享的专家知识：
 
 ```json
 {
@@ -510,21 +506,17 @@ curl -X POST "http://127.0.0.1:8188/anima/generate?workflow=ultrareal" \
 | 模型 | 端点 | cfg | steps | neg | 字段 |
 |------|------|-----|-------|-----|------|
 | Base 1.0 | `/anima/generate` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 全部 14 字段 |
-| Turbo 1.0 | `/anima/generate_turbo_v1` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 有 | 简化（无 style/tags/environment） |
+| Turbo 1.1 | `/anima/generate_turbo_v1` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 有 | 简化（无 style/tags/environment） |
 | Fuse | `/anima/generate?workflow=fuse` | 固定 1（负面惰性，无负面） | 8-12, 默认 10 | 无 | 简化（无 style/tags/environment） |
-| Fuse 1.0（已过期） | `/anima/generate?workflow=fuse1.0` | 1-1.6，默认 1.2（内置文字类负面常驻） | 8-12, 默认 8 | 有（内置默认） | 简化（无 style/tags/environment） |
-| Aesthetic 1.0 | `/anima/generate_aesthetic_v1` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 简化（无 style/tags/environment） |
+| Aesthetic 1.1 | `/anima/generate_aesthetic_v1` | 3-8, 默认 4 | 20-60, 默认 35 | 有 | 简化（无 style/tags/environment） |
 | UltraReal | `/anima/generate?workflow=ultrareal` | 默认 4 | 默认 28 | 有（内置默认） | 三段式（tags 前缀 + nltags 自然语言 + 后缀） |
 | Silvermoon | `/anima/generate?workflow=silvermoon` | 4-5, 默认 4.5 | 20-28, 默认 24 | 无 | 简化（无 style/tags/environment），score_N 质量前缀 |
 | Silvermoon Turbo | `/anima/generate?workflow=silvermoon_turbo` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 无（默认惰性） | 简化（无 style/tags/environment），score_N 质量前缀 |
 | Anima 2.9B | `/anima/generate?workflow=anima29` | 3.5-5, 默认 4 | 28-50, 默认 30 | 有 | 简化（无 style/tags/environment），无质量词前缀 |
 | Anima 2.9B Turbo | `/anima/generate?workflow=anima29_turbo` | 1-1.6，默认 1（写 neg 时 1.2） | 8-12, 默认 8 | 有 | 简化，无质量词前缀 |
-| Anima 2.9B rdbt | `/anima/generate?workflow=anima29_rdbt` | 1-1.6，默认 1（写 neg 时 1.2） | 8-32, 默认 16 | 有 | 简化，无质量词前缀 |
-| Aura | `/anima/generate?workflow=aura` | 4-5, 默认 5 | 8-30, 默认 12 | 有 | 简化，风格质量标签三选一 |
-| Aura-speed | `/anima/generate?workflow=aura-speed` | 4-5, 默认 5 | 8-30, 默认 10 | 有 | 简化，风格质量标签三选一 |
 | CyberReal | `/anima/generate?workflow=cyberreal` | 1-1.5，默认 1（写 neg 时 1.2） | 8-12, 默认 10 | 有（默认惰性） | 简化，score_N + 风格槽 |
 
-> 简化字段工作流（turbo_v1 / fuse / aesthetic_v1 / silvermoon / anima29 系 / aura 系）的 `tags` 为英文自然语言完整句子；base 的自然语言在 `nltags`，ultrareal 为三段式。`appearance` 等标签字段只填有明确指代的标准 Danbooru tag，不要编造。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分逐角色分别描述。
+> 简化字段工作流（turbo_v1.1 / fuse / aesthetic_v1.1 / silvermoon / anima29 系）的 `tags` 为英文自然语言完整句子；base 的自然语言在 `nltags`，ultrareal 为三段式。`appearance` 等标签字段只填有明确指代的标准 Danbooru tag，不要编造。多角色时 `appearance` 留空、`tags` 禁止包含角色外貌信息，每个角色的外观在自然语言部分逐角色分别描述。
 
 ---
 

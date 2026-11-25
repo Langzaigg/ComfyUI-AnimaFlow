@@ -37,14 +37,11 @@ pip install -r ComfyUI-AnimaFlow/requirements.txt
 | 文件 | 路径 | 用于工作流 |
 |------|------|-----------|
 | `anima-base-v1.0.safetensors` | `models/diffusion_models/` | base |
-| `anima29B_v10.safetensors` | `models/diffusion_models/` | anima29 系 / aura 系底座 |
-| `anima-turbo-v1.1.safetensors` | `models/diffusion_models/` | turbo_v1 |
-| `anima-aesthetic-v1.1.safetensors` | `models/diffusion_models/` | aesthetic_v1 |
+| `anima29B_v10.safetensors` | `models/diffusion_models/` | anima29 / anima29_turbo |
+| `anima-turbo-v1.1.safetensors` | `models/diffusion_models/` | turbo_v1.1 |
+| `anima-aesthetic-v1.1.safetensors` | `models/diffusion_models/` | aesthetic_v1.1 |
 | `anima29b-sm29t-fuse1.2.safetensors` | `models/diffusion_models/` | fuse（融合 UNET v1.2，非官方衍生） |
-| `anima29b-p1-turbo1.1.safetensors` | `models/diffusion_models/` | fuse1.0（已过期，融合 UNET v1.0） |
 | `anima29b-turbolora1.1.safetensors` | `models/loras/` | anima29_turbo（强度 0.8，免补丁重映射版） |
-| `rdbt_v2.0_base_anima2.9b_p1_lora.safetensors` + `rdbt_v2.0_distilled_addon_anima2.9b_p1_lora.safetensors` | `models/loras/` | anima29_rdbt（双 LoRA 串联） |
-| `auranima29B_qpolaP101Int8W8a8.safetensors` | `models/diffusion_models/` | aura / aura-speed（Int8 量化） |
 | `Anima_UltraReal_finetune_v3.safetensors` | `models/diffusion_models/` | ultrareal |
 | `silvermoonmixAnima_v2329B.safetensors` | `models/diffusion_models/` | silvermoon |
 | `silvermoonmixAnima_v2329BTurbo.safetensors` | `models/diffusion_models/` | silvermoon_turbo |

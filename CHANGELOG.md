@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **工作流清理与版本命名修正（2026-11-24）**: 移除 `fuse1.0`、`anima29_rdbt`、`aura`、`aura-speed` 及其执行器预设、schema、knowledge、专用测试和本地权重。Turbo / Aesthetic 公开工作流更正为 `turbo_v1.1` / `aesthetic_v1.1`，内部预设为 `turbo1.1` / `aesthetic1.1`，与实际模型文件一致；旧 `_v1` 兼容端点路径保留。
+
 - **MOSS Anime Turbo AIO v1.2（2026-11-24）**: 默认 DiT 换为 `moss_anime_turbo_aio_v1.2_bf16_diffusion.safetensors`，配方为 MossYume + DMD2@1.0 + pussy@0.3 + cute-anime DoRA@0.3。两种 Turbo 基底、pussy 0.3/0.7 与 cute 叠加方案均在同一 19 场景库以 4 步、CFG 1、`res_multistep + simple`、固定 seed 完成横评，最终采用 pussy 0.3 + cute 0.3。BF16 与 INT8 ConvRot 发布于 [Langzaigg/moss_anime_turbo_aio](https://huggingface.co/Langzaigg/moss_anime_turbo_aio)。MOSS 前置卸载改为独立队列节点，在主任务前顺序释放模型和显存，不再因队列非空拒绝提交；此功能默认关闭，本机通过 `ANIMATOOL_UNLOAD_ON_MODEL_SWITCH=1` 开启。
 
 - **MOSS BF16 三段式工作流与横评（2026-10-26）**: 默认 DiT 换为 `moss_anime_bf16_diffusion.safetensors`，改用 `UNETLoader + CLIPLoader(type=moss_image) + VAELoader` 分别加载 DiT、INT8 TE 与 FLUX.2 VAE；旧 AIO INT8 保留为历史版本。19 个同 seed 场景最终全部成功（一次设备丢失后重启续跑），相对旧版目检 14 项更好、1 项更差、4 项持平，中位耗时 27.4s 对 28.2s。默认继续使用 `res_multistep + simple + 4 步`。结果：`examples/results/moss_res_multistep_s4_20261026_153414/`。同时发布低显存变体 `moss_anime_int8_convrot_diffusion.safetensors`，已完成一次 4 步生成实测。
